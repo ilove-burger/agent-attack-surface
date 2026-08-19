@@ -1,16 +1,16 @@
-# Codex — coverage detail
+# Codex — 커버리지 상세
 
-Status legend in the [root README](../README.md). Reproductions use the `hunma_agent` harness against
-pinned `@openai/codex` artifacts (SHA-256 in `harness/versions/manifest.json`).
+상태 범례는 [루트 README](../README.md) 참고. 재현은 `hunma_agent` 하네스로 SHA-256 고정된
+`@openai/codex` 아티팩트(`harness/versions/manifest.json`)를 상대로 한다.
 
-## Verified here
+## 여기서 검증함
 
-| ID | Surface | Verdict | Harness |
+| ID | 서피스 | 판정 | 하네스 |
 |---|---|---|---|
-| [CVE-2025-61260](cve-2025-61260-env-codexhome/) | project `.env` re-points `CODEX_HOME` → local MCP auto-spawn | reproduced across vuln/fixed/current | `compare-codex-61260` (+ `-variants`) |
+| [CVE-2025-61260](cve-2025-61260-env-codexhome/) | 프로젝트 `.env`가 `CODEX_HOME` 재지정 → 로컬 MCP 자동 spawn | vuln/fixed/current 전 구간 재현 | `compare-codex-61260` (+ `-variants`) |
 
-## Open / candidate angles
+## Open / 후보 각도
 
-New Codex angles are probed on top of the CVE-2025-61260 harness (config-reload, gitdir/commondir,
-nested/symlink/worktree repos, session-resume, pre-existing CODEX_HOME negative control). See the
-`compare-codex-61260-variants` case matrix in `hunma_agent`. No novel Codex finding promoted yet.
+새 Codex 각도는 CVE-2025-61260 하네스 위에서 탐색한다(config-reload, gitdir/commondir,
+nested/symlink/worktree repo, session-resume, 사전 존재 CODEX_HOME 음성 대조군). `hunma_agent`의
+`compare-codex-61260-variants` 케이스 매트릭스 참고. 아직 승격된 신규 Codex 발견은 없음.

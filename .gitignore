@@ -1,0 +1,8 @@
+# no build/runtime artifacts here — this repo is docs/index only
+__pycache__/
+*.pyc
+.DS_Store
+# never commit harness run outputs or live artifacts
+harness/runs/
+*.tgz
+*.tar.gz

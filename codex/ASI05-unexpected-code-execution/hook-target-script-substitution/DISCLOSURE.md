@@ -1,6 +1,6 @@
 # OpenAI Codex CLI — 승인된 project hook의 대상 스크립트 치환을 통한 sandbox-외부 코드 실행
 
-> 상태: `소스 확인` · `unit test 재현(rust-v0.148.0)` · `E2E sink 재현` · `Faithful E2E 재현(bypass 없이, 0.148.0 바이너리)` · `벤더 미확인 0-day 후보`
+> 상태: `소스 확인` · `unit test 재현(rust-v0.148.0)` · `E2E sink 재현` · `실제 UI/API 승인 E2E 재현(bypass 없이, 0.148.0 바이너리)` · `벤더 미확인 0-day 후보`
 >
 > 증거 표기: **[소스]** source에서 확인 · **[동적]** 로컬 실험 관찰 · **[추론]** 근거에서 도출
 
@@ -91,7 +91,7 @@ let child = command.spawn();   // 비샌드박스 직접 spawn
 즉 이는 단순 "sandbox 내부 실행"이 아니라, **승인된 hook capability를 다른 코드로 재바인딩하는 host
 same-user 코드 실행**이다.
 
-## [6] 재현 및 증거 (3단)
+## [6] 재현 및 증거 (5단)
 
 ### (1) 소스 — 0.147→0.148 diff
 `hook_hash`가 참조 스크립트 내용을 제외하는 로직이 두 버전에서 동일(변경은 cosmetic). 최신에도 유효.
@@ -137,7 +137,7 @@ mjhy3
 ```
 repo **밖**에 marker 생성, `whoami`=사용자 본인(**same-user**), command sandbox 밖 실행 확인.
 
-### (4) Faithful E2E — 완전한 체인 (trust-bypass 없이) ★
+### (4) Faithful E2E — 승인 상태 직접 저장 + trust-bypass 없는 실행
 
 승인 → 스크립트 교체 → **재승인 없이 실행**을 단일 실행으로 증명한다. `--dangerously-bypass-hook-trust`
 를 쓰지 않는다.
@@ -150,7 +150,8 @@ bash poc-faithful.sh SessionStart
 1. trusted 프로젝트에 benign hook 설정
 2. **app-server `hooks/list`로 hook의 `key`+`currentHash` 획득** (= TUI가 승인 시 저장하는 값). 관찰:
    `key="<proj>/.codex/hooks.json:session_start:0:0"`, `currentHash="sha256:bd0fab40…"`, `trustStatus="untrusted"`
-3. `CODEX_HOME/config.toml`에 `[hooks.state."<key>"] trusted_hash="<currentHash>"` 기록 (= **사용자 승인 저장**)
+3. `CODEX_HOME/config.toml`에 `[hooks.state."<key>"] trusted_hash="<currentHash>"`를 직접 기록
+   (= 실제 UI가 남기는 승인 상태를 시뮬레이션)
 4. 공격자가 스크립트 **내용만** 교체 (hook 정의/문자열 불변)
 5. **`codex exec` (bypass 없이)** → `currentHash`가 스크립트 내용과 무관하므로 여전히 `trusted_hash == currentHash`
    → hook이 `Trusted`로 발화
@@ -166,8 +167,54 @@ mjhy3
 ```
 
 **승인된 hook의 스크립트를 교체했음에도 재승인 프롬프트 없이** command sandbox 밖에서 사용자 권한으로
-실행됐다. `--dangerously-bypass-hook-trust` 없이 실제 신뢰 플로우만으로 성립하므로 "trust를 우회했다"는
-반론이 성립하지 않는다.
+실행됐다. 이 단계는 bypass 없는 실행을 확인하지만 승인 상태를 PoC가 직접 저장하므로, 실제 사용자 승인
+경로에 대한 최종 증거는 다음 단계로 분리한다.
+
+### (5) 실제 UI/API 승인 E2E — 완전한 체인 ★
+
+`poc-real-approval-e2e.py`는 승인 상태를 직접 작성하지 않고 다음 두 승인 경로를 각각 시험한다.
+
+```bash
+./poc-real-approval-e2e.py --approval ui --codex /absolute/path/to/codex
+./poc-real-approval-e2e.py --approval api --codex /absolute/path/to/codex
+```
+
+- `ui`: fresh `CODEX_HOME`의 startup hook review 화면에서 실제 `Trust all and continue` 항목을 PTY로
+  선택한다.
+- `api`: app-server `hooks/list`에서 얻은 `key`와 `currentHash`를 TUI와 같은
+  `config/batchWrite(keyPath="hooks.state", mergeStrategy="upsert")` 요청으로 승인한다.
+
+두 모드의 공통 관찰(최신 npm 안정 배포본):
+
+```text
+codex_version: codex-cli 0.148.0
+binary sha256: ac2cfed85fb647d61e0150b8548102b330e4799d9d81ad5d354de701edf6b074
+before:         trustStatus=untrusted
+after approval: trustStatus=trusted
+after swap:     trustStatus=trusted, key/currentHash unchanged
+bypass flag:    false
+exec return:    0
+marker:         observed outside project
+whoami:         mjhy3
+result:         PASS (UI), PASS (API)
+```
+
+같은 고정 바이너리로 각 승인 경로를 세 번씩 fresh 환경에서 반복한 결과도 안정적으로 분리됐다.
+
+```text
+UI:  3/3 PASS
+API: 3/3 PASS
+합계: 6/6 PASS
+```
+
+모든 run이 `Untrusted → Trusted → 스크립트 치환 후에도 Trusted`, `currentHash` 불변, outside marker
+생성을 동일하게 관찰했다. 실행 환경과 개별 결과 SHA-256은 `STABILITY_EVIDENCE.md`에 첨부했다.
+
+UI 승인도 내부적으로 app-server `config/batchWrite`를 사용한다. 공개 app-server에는 hook 전용
+`approve` 메서드가 없으며, 이 config write가 Codex TUI가 구현한 실제 승인 API다. 승인 후 스크립트
+내용만 바꿔도 `hooks/list`가 계속 `Trusted`를 반환하고, `--dangerously-bypass-hook-trust` 없는
+`codex exec`에서 교체된 코드가 실행됐다. 따라서 "PoC가 승인 값을 임의로 주입했다"거나 "trust bypass
+플래그 때문에 실행됐다"는 두 반론 모두 성립하지 않는다.
 
 ## [7] 정말 취약점인가
 
@@ -203,4 +250,7 @@ mjhy3
 
 - `repro-test.patch` — (2) unit test (rust-v0.148.0의 codex-rs/hooks/src/engine/discovery.rs에 적용)
 - `e2e-run.sh`, `e2e-mock.py` — (3) E2E 드라이버 (loopback mock Responses API + marker 오라클)
+- `poc-faithful.sh`, `poc-faithful-hooksclient.py` — (4) 직접 승인 상태 저장 + bypass 없는 실행
+- `poc-real-approval-e2e.py` — (5) 실제 UI/API 승인 + 상태 재조회 + JSON 결과
+- `repeat-real-approval-e2e.py`, `STABILITY_EVIDENCE.md` — UI/API 각 3회 반복 집계와 무결성 기록
 - `README.md` — 재현 절차와 관찰 결과

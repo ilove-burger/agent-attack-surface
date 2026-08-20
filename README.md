@@ -72,9 +72,10 @@ rule-match/AST permission. 속일 수 있는 LLM/데이터/컨텍스트/웹 계�
 
 | ASI | 카테고리 | 검증한 기법 (판정) | 미탐색 |
 |---|---|---|---|
+| [ASI02](codex/ASI02-tool-misuse-exploitation/) | Tool Misuse & Exploitation | project-local ripgrep config → approval 없는 `--pre` 실행 및 workspace 밖 canary 읽기 → 🔴 LIVE (제보 예정) | 4+ 변형 |
 | [ASI04](codex/ASI04-agentic-supply-chain/) | Agentic Supply Chain | CVE-2025-61260 `.env`→`CODEX_HOME` 재지정→로컬 MCP spawn → 🟢 재현 | 4+ 변형 |
 | [ASI05](codex/ASI05-unexpected-code-execution/) | Unexpected Code Execution (RCE) | 승인된 project hook 대상 스크립트 치환 → sandbox-외부 same-user RCE → 🔴 LIVE (제보 예정) | 4+ 변형 |
-| ASI01·02·03·06·07·08·09·10 | (나머지 카테고리) | — | ☐ 미조사 |
+| ASI01·03·06·07·08·09·10 | (나머지 카테고리) | — | ☐ 미조사 |
 
 ## 재현 방법
 

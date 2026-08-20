@@ -6,7 +6,7 @@ OWASP Agentic Security Initiative(ASI) Top 10 분류로 본 어택 서피스 커
 | ASI | 카테고리 | 검증 커버리지 | 미탐색 | 폴더 |
 |---|---|---|---|---|
 | ASI01 | Agent Goal Hijack | ☐ 미조사 | 다수(미조사) | [ASI01-agent-goal-hijack](ASI01-agent-goal-hijack/) |
-| ASI02 | Tool Misuse & Exploitation | ☐ 미조사 | 다수(미조사) | [ASI02-tool-misuse-exploitation](ASI02-tool-misuse-exploitation/) |
+| ASI02 | Tool Misuse & Exploitation | 🔴 기법 1건(LIVE, 제보 예정) · 미탐색 4+ | 4+ 변형 | [ASI02-tool-misuse-exploitation](ASI02-tool-misuse-exploitation/) |
 | ASI03 | Identity & Privilege Abuse | ☐ 미조사 | 다수(미조사) | [ASI03-identity-privilege-abuse](ASI03-identity-privilege-abuse/) |
 | ASI04 | Agentic Supply Chain Vulnerabilities | 🟢 기법 1건 · 미탐색 4+ | 4+ 변형 | [ASI04-agentic-supply-chain](ASI04-agentic-supply-chain/) |
 | ASI05 | Unexpected Code Execution (RCE) | 🔴 기법 1건(LIVE, 제보 예정) · 미탐색 4+ | 4+ 변형 | [ASI05-unexpected-code-execution](ASI05-unexpected-code-execution/) |

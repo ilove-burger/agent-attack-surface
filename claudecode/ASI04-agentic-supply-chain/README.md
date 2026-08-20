@@ -12,7 +12,7 @@
 |---|---|---|
 | 악성 MCP 서버가 tool_result에 tool_use 위조 | 🟢 KILLED | [mcp-forged-tool-use](mcp-forged-tool-use/) |
 
-- **악성 MCP 서버가 tool_result에 tool_use 위조** — MCP 결과가 text/image 화이트리스트로 정규화(default:return[])되어 위조 tool_use 폐기. 하네스: `compare-claude-p2`.
+- **악성 MCP 서버가 tool_result에 tool_use 위조** — MCP 결과가 text/image 화이트리스트로 정규화(default:return[])되어 위조 tool_use 폐기. 하네스: `compare-claude-mcp-forged-tooluse`.
 
 ## 미탐색 표면 (open variants)
 

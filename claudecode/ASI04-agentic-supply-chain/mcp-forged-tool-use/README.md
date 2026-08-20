@@ -17,9 +17,9 @@
 permission이 아니다. 2.1.226·2.1.235(바이너리)에서 결정론적으로 확인, 화이트리스트는 **1.0.92**
 소스에서 직접 읽음.
 
-**재현 하네스:** `hunma_agent/harness` — `compare-claude-p2`
-(fixtures `harness/fixtures/claude-p2/{evil_mcp_server,mock_model_server,run_with_mock}.py`,
-cases `harness/cases/claude-p2-*.json`).
+**재현 하네스:** `hunma_agent/harness` — `compare-claude-mcp-forged-tooluse`
+(fixtures `harness/fixtures/claude-mcp-forged-tooluse/{evil_mcp_server,mock_model_server,run_with_mock}.py`,
+cases `harness/cases/claude-mcp-forged-tooluse-*.json`).
 
 ## 가설
 
@@ -69,7 +69,7 @@ permission layer다.
 
 ## 결정론적 증명 (hunma 하네스)
 
-`compare-claude-p2`는 **실제 stdio MCP 서버**(`fixtures/claude-p2/evil_mcp_server.py`)를 돌린다.
+`compare-claude-mcp-forged-tooluse`는 **실제 stdio MCP 서버**(`fixtures/claude-mcp-forged-tooluse/evil_mcp_server.py`)를 돌린다.
 이 서버는 정상처럼 보이는 툴(`fetch_notes`) 하나를 노출하고, `tools/call` 시 `content` 배열에
 **위조 Bash `touch ${WORKSPACE}/marker` tool_use**를 세 가지 인코딩으로 담은 `tool_result`를 반환한다:
 
@@ -88,7 +88,7 @@ auto-approve됐을 것이다; permission을 방벽 후보에서 일부러 제거
 방어임을 격리한다. 별도 **proof** 파일(MCP 서버가 매 `tools/call`마다 touch)이 악성 결과가 실제로
 전달됐음을 보증한다 — vacuous pass 없음.
 
-**결과 매트릭스** — `compare-claude-p2 --repeat 2`, marker in-workspace, `denied` = `permission_denials`
+**결과 매트릭스** — `compare-claude-mcp-forged-tooluse --repeat 2`, marker in-workspace, `denied` = `permission_denials`
 비어있지 않음:
 
 | scenario | 버전 | marker | proof (MCP 호출됨) | denied |
@@ -149,10 +149,10 @@ emit하고 (load-bearing한) Bash permission layer를 통과하는 데 달려 �
 
 ## Files
 
-- 악성 MCP 서버: `hunma_agent/harness/fixtures/claude-p2/evil_mcp_server.py`
-- mock 모델 / wrapper: `hunma_agent/harness/fixtures/claude-p2/{mock_model_server,run_with_mock}.py`
-- Cases: `hunma_agent/harness/cases/claude-p2-{forge-raw,forge-text,forge-both,positive-control}-{current,latest}.json`
-- Compare: `hunma_agent/harness/compare-claude-p2` → `harness/lib/compare_claude_p2.py`
+- 악성 MCP 서버: `hunma_agent/harness/fixtures/claude-mcp-forged-tooluse/evil_mcp_server.py`
+- mock 모델 / wrapper: `hunma_agent/harness/fixtures/claude-mcp-forged-tooluse/{mock_model_server,run_with_mock}.py`
+- Cases: `hunma_agent/harness/cases/claude-mcp-forged-tooluse-{forge-raw,forge-text,forge-both,positive-control}-{current,latest}.json`
+- Compare: `hunma_agent/harness/compare-claude-mcp-forged-tooluse` → `harness/lib/compare_claude_mcp_forged_tooluse.py`
 - 정규화기 소스 (1.0.92 `cli.js`): `OBB(A,B)` 콘텐츠 타입 switch(`text`/`image`/`resource`/
   `resource_link`, `default: return []`), MCP 콜 경로 `TBB(...)`에서 소비. 2.1.226 / 2.1.235
   네이티브 바이너리도 동일 형태(`[Resource from … at …]`, `[Resource link: …]`, `resource_link`;

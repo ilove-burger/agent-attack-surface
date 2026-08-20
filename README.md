@@ -81,7 +81,7 @@ rule-match/AST permission. 속일 수 있는 LLM/데이터/컨텍스트/웹 계�
 
 ```
 git clone <hunma_agent remote>
-cd hunma_agent && ./harness/compare-claude-p4 --repeat 2   # (또는 -a14 / -p2 / -p3 / compare-codex-61260)
+cd hunma_agent && ./harness/compare-claude-webfetch-ipi --repeat 2   # (또는 compare-claude-bash-classifier-injection / -mcp-forged-tooluse / -claudemd-ipi / compare-codex-61260)
 ```
 
 하네스는 SHA-256 고정 아티팩트(`harness/versions/manifest.json`)를 쓰고, 실제 CLI를 bwrap 아래에서

@@ -17,9 +17,9 @@ allow-rule이 없으면 **명시적으로 거부**된다. fetch된 콘텐츠는 
 preflight 도메인 평판 게이트, 도메인 스코프 권한, `maxRedirects:0`). 1.0.92·2.1.226·2.1.235에서
 결정론적으로 확인.
 
-**재현 하네스:** `hunma_agent/harness` — `compare-claude-p4`
-(fixtures `harness/fixtures/claude-p4/{malicious_web_server,mock_model_server,run_with_mock}.py`,
-cases `harness/cases/claude-p4-*.json`).
+**재현 하네스:** `hunma_agent/harness` — `compare-claude-webfetch-ipi`
+(fixtures `harness/fixtures/claude-webfetch-ipi/{malicious_web_server,mock_model_server,run_with_mock}.py`,
+cases `harness/cases/claude-webfetch-ipi-*.json`).
 
 ## 가설
 
@@ -58,7 +58,7 @@ rule engine에 절대 들어가지 않는다. 거기서 유도된 Bash 명령은
 
 ## 결정론적 증명 (hunma 하네스)
 
-`compare-claude-p4`는 loopback에 실제 self-signed **https** 악성 웹 서버를 띄우고(페이지 = canary +
+`compare-claude-webfetch-ipi`는 loopback에 실제 self-signed **https** 악성 웹 서버를 띄우고(페이지 = canary +
 가짜 `<system>` pre-approval + `touch ${WORKSPACE}/marker`), mock Anthropic API를 붙인다. mock은
 **tools-aware**다: WebFetch의 요약 서브콜(`tools` 없음)과 메인 에이전트 턴(`tools` 있음)을 구분한다.
 worst case를 end-to-end로 몰아간다:
@@ -78,7 +78,7 @@ worst case를 end-to-end로 몰아간다:
 - **egress** — 기본 설정; `--unshare-net`에서 preflight가 claude.ai에 못 닿음 → `check_failed` →
   fail-closed → 페이지 fetch 안 됨. Layer 1을 보여줌.
 
-**결과 매트릭스** — `compare-claude-p4 --repeat 2`, marker in-workspace, `denied` = `permission_denials`
+**결과 매트릭스** — `compare-claude-webfetch-ipi --repeat 2`, marker in-workspace, `denied` = `permission_denials`
 비어있지 않음:
 
 | case | 버전 | 웹 fetch됨 | 메인 에이전트 도달 | marker | denied |
@@ -126,11 +126,11 @@ permission layer가 게이트하고, 그 layer는 allow 결정에 fetch된 콘�
 ## Files
 
 - 악성 웹 서버 / mock 모델 / wrapper:
-  `hunma_agent/harness/fixtures/claude-p4/{malicious_web_server,mock_model_server,run_with_mock}.py`
+  `hunma_agent/harness/fixtures/claude-webfetch-ipi/{malicious_web_server,mock_model_server,run_with_mock}.py`
   (`run_with_mock`이 self-signed 127.0.0.1 cert 발급, https 공격 페이지 서빙, `skipWebFetchPreflight`
   토글; `mock_model_server`가 요약 vs 메인 에이전트 콜을 라우팅하고 `HUNMA-P4-CANARY-…` sentinel을 셈).
-- Cases: `hunma_agent/harness/cases/claude-p4-{delivered-deny,delivered-positive-control,egress-deny}-{92,current,latest}.json`
-- Compare: `hunma_agent/harness/compare-claude-p4` → `harness/lib/compare_claude_p4.py`
+- Cases: `hunma_agent/harness/cases/claude-webfetch-ipi-{delivered-deny,delivered-positive-control,egress-deny}-{92,current,latest}.json`
+- Compare: `hunma_agent/harness/compare-claude-webfetch-ipi` → `harness/lib/compare_claude_webfetch_ipi.py`
 - WebFetch 소스 (1.0.92 `cli.js`): `http→https` 업그레이드 + preflight `GN5`(claude.ai domain_info) +
   fetch `KhB`(`maxRedirects:0`, 수동 redirect 정책 `YN5`) + 로컬 `turndown` HTML→markdown;
   권한 형식 `WebFetch(domain:host)`; `skipWebFetchPreflight` settings 플래그.

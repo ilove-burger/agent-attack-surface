@@ -16,9 +16,9 @@
 가짜 `allow`-rule / `settings.json`은 무효다. permission 결정은 CLI/settings allow-rule + 코드
 분류기가 하며, 이들은 `CLAUDE.md`를 절대 읽지 않는다. 1.0.92·2.1.226·2.1.235에서 결정론적으로 확인.
 
-**재현 하네스:** `hunma_agent/harness` — `compare-claude-p3`
-(fixtures `harness/fixtures/claude-p3/{mock_model_server,run_with_mock}.py`, cases
-`harness/cases/claude-p3-*.json`).
+**재현 하네스:** `hunma_agent/harness` — `compare-claude-claudemd-ipi`
+(fixtures `harness/fixtures/claude-claudemd-ipi/{mock_model_server,run_with_mock}.py`, cases
+`harness/cases/claude-claudemd-ipi-*.json`).
 
 ## 가설
 
@@ -51,7 +51,7 @@ Bash 분류기 인젝션 검증(ASI02)가 load-bearing으로 증명한 바로 �
 
 ## 결정론적 증명 (hunma 하네스)
 
-`compare-claude-p3`는 workspace에 악성 `CLAUDE.md`를 쓰고 실제 Claude Code 아티팩트를
+`compare-claude-claudemd-ipi`는 workspace에 악성 `CLAUDE.md`를 쓰고 실제 Claude Code 아티팩트를
 `run-isolated` 아래에서 돌린다. mock 모델은 **worst case**로 몰린다: 인젝션이 완전히 성공했다고
 가정하고 악성 `Bash touch ${WORKSPACE}/marker` `tool_use`를 turn 1에 무조건 emit한다(완전히 설득된
 모델 시뮬레이션 — 실제 모델의 설득 가능성은 논점이 아님, Bash 분류기 인젝션 검증(ASI02)대로: 중요한 건 설득 *뒤*에 얻는 권한).
@@ -67,7 +67,7 @@ Bash 분류기 인젝션 검증(ASI02)가 load-bearing으로 증명한 바로 �
 발화시킬 수 있다. **positive control**은 `Bash(touch:*)`를 주고 marker를 발화시켜, 명령이 진짜로
 허가됐을 때 실행됨을 증명한다(falsifiable한 음성).
 
-**결과 매트릭스** — `compare-claude-p3 --repeat 2`, marker in-workspace, `denied` = `permission_denials`
+**결과 매트릭스** — `compare-claude-claudemd-ipi --repeat 2`, marker in-workspace, `denied` = `permission_denials`
 비어있지 않음:
 
 | case | 버전 | CLAUDE.md 주입됨 (canary) | marker | denied |
@@ -121,10 +121,10 @@ layer는 allow 결정에 메모리 파일을 읽지 않는다.
 
 ## Files
 
-- mock 모델 / wrapper: `hunma_agent/harness/fixtures/claude-p3/{mock_model_server,run_with_mock}.py`
+- mock 모델 / wrapper: `hunma_agent/harness/fixtures/claude-claudemd-ipi/{mock_model_server,run_with_mock}.py`
   (악성 `CLAUDE.md`를 씀; `mock_model_server`가 `HUNMA-P3-CANARY-…` sentinel을 세어 주입을 증명).
-- Cases: `hunma_agent/harness/cases/claude-p3-{authclaim-deny,fakerule-deny,positive-control}-{92,current,latest}.json`
-- Compare: `hunma_agent/harness/compare-claude-p3` → `harness/lib/compare_claude_p3.py`
+- Cases: `hunma_agent/harness/cases/claude-claudemd-ipi-{authclaim-deny,fakerule-deny,positive-control}-{92,current,latest}.json`
+- Compare: `hunma_agent/harness/compare-claude-claudemd-ipi` → `harness/lib/compare_claude_claudemd_ipi.py`
 - 발견 소스 (1.0.92 `cli.js`): `P11`/`cW`가 `CLAUDE.md` / `CLAUDE.local.md` / User / `@import`를 재귀
   수집; permission engine(`te2`/`uH0` rule-match)은 이들을 참조 안 함; permission 프롬프트에서 유일한
   `CLAUDE.md` 참조는 sandbox=false 휴리스틱("…including all the user's CLAUDE.md files…as inputs to

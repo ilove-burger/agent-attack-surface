@@ -14,9 +14,9 @@
 set -uo pipefail
 
 EVENT="${1:-SessionStart}"
-CX="/home/mjhy3/agent/hunma_agent/harness/targets/codex-0.148.0/package/vendor/x86_64-unknown-linux-musl/bin/codex"
+CX="${CX:-/home/mjhy3/agent/hunma_agent/harness/targets/codex-0.148.0/package/vendor/x86_64-unknown-linux-musl/bin/codex}"
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-B="/home/mjhy3/agent/hunting-box/work/codex-hook-poc"
+B="${B:-/home/mjhy3/agent/hunting-box/work/codex-hook-poc}"
 rm -rf "$B"; mkdir -p "$B/CH" "$B/proj/.codex" "$B/outside"
 PROJ="$B/proj"
 # proj 를 독립 project root 로 만든다(가까운 .git 이 상위 /home/mjhy3/agent/.git 를 이겨,

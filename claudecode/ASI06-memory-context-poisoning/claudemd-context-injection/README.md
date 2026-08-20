@@ -1,11 +1,13 @@
 > **Provenance:** 이 워크스페이스에서 `hunma_agent` marker-only 하네스(bwrap 격리, mock Anthropic
 > API, 실제 Claude Code 아티팩트 1.0.92 / 2.1.226 / 2.1.235)로 독립 검증.
-> **판정:** KILLED (architectural) · **제보:** 미제출(방어됨). 상위 [카테고리 인덱스](../README.md)와
-> repo 루트 [README](../../../README.md) 참고.
+> **분석 상태:** `배포 artifact 확인` · `E2E marker 재현(공격 실패 → 명시적 거부)` · `소스 확인(P11 자동발견·permission 경로)` · `version boundary: 1.0.92 / 2.1.226 / 2.1.235`
+> **시험한 보안 경계:** 자동발견된 `CLAUDE.md`(untrusted context 텍스트) ≠ tool 실행 권한
+> **판정:** 공격 실패 — 불변식 유지 (제보 대상 아님). 상위 [카테고리 인덱스](../README.md) · repo 루트 [README](../../../README.md).
+> **OWASP ASI:** Primary **ASI06 Memory & Context Poisoning** · Secondary ASI01 Agent Goal Hijack
 >
 > 재현: 이 repo 옆에 `hunma_agent`를 클론하고 아래 **Files**에 적힌 `compare-claude-*` 스크립트 실행.
 
-# A11 / P3 — 자동발견된 악성 `CLAUDE.md` → 간접 프롬프트 인젝션 → Bash
+# 자동발견된 악성 `CLAUDE.md` → 간접 프롬프트 인젝션 → Bash
 
 **상태:** **KILLED (architectural)** — 공격자 통제 `CLAUDE.md`는 자동발견되어 모델 컨텍스트에
 주입된다(진짜 간접 프롬프트 인젝션 채널). 하지만 그건 **untrusted 컨텍스트 텍스트**다: 모델을
@@ -18,12 +20,12 @@
 (fixtures `harness/fixtures/claude-p3/{mock_model_server,run_with_mock}.py`, cases
 `harness/cases/claude-p3-*.json`).
 
-## 가설 (P3, index 각도 A11)
+## 가설
 
 Claude Code는 메모리 파일 — 프로젝트 `CLAUDE.md`, `CLAUDE.local.md`, 사용자 `~/.claude/CLAUDE.md`,
 그리고 `@import` include(1.0.92의 `P11`/`cW`가 재귀 수집) — 을 자동발견해 모델 컨텍스트에 주입한다.
 따라서 `CLAUDE.md`(클론한 repo, 워크스페이스에 떨군 하위 디렉터리, 악성 tarball)를 통제하는 공격자는
-모델이 프로젝트 지시로 읽는 텍스트를 통제한다. P3의 질문:
+모델이 프로젝트 지시로 읽는 텍스트를 통제한다. 핵심 질문:
 
 > 악성 `CLAUDE.md`가 Bash 명령을 **auto-execute**로 몰 수 있는가 — 모델을 설득하고 *그 설득이
 > 권한으로 번역되게* 하거나, permission layer가 인정하는 권한 부여(가짜 pre-approval, 가짜
@@ -45,14 +47,14 @@ Claude Code는 메모리 파일 — 프로젝트 `CLAUDE.md`, `CLAUDE.local.md`,
 
 즉 악성 `CLAUDE.md`가 할 수 있는 최대치는 **간접 프롬프트 인젝션**이다: 모델을 설득해 Bash
 `tool_use`를 emit하게 하는 것. 그것이 실행을 낳는지는 downstream permission layer가 결정한다 —
-A14가 load-bearing으로 증명한 바로 그 경계. `CLAUDE.md`는 *설득* 채널을 더할 뿐 *권한* 채널이 아니다.
+Bash 분류기 인젝션 검증(ASI02)가 load-bearing으로 증명한 바로 그 경계. `CLAUDE.md`는 *설득* 채널을 더할 뿐 *권한* 채널이 아니다.
 
 ## 결정론적 증명 (hunma 하네스)
 
 `compare-claude-p3`는 workspace에 악성 `CLAUDE.md`를 쓰고 실제 Claude Code 아티팩트를
 `run-isolated` 아래에서 돌린다. mock 모델은 **worst case**로 몰린다: 인젝션이 완전히 성공했다고
 가정하고 악성 `Bash touch ${WORKSPACE}/marker` `tool_use`를 turn 1에 무조건 emit한다(완전히 설득된
-모델 시뮬레이션 — 실제 모델의 설득 가능성은 논점이 아님, A14대로: 중요한 건 설득 *뒤*에 얻는 권한).
+모델 시뮬레이션 — 실제 모델의 설득 가능성은 논점이 아님, Bash 분류기 인젝션 검증(ASI02)대로: 중요한 건 설득 *뒤*에 얻는 권한).
 `CLAUDE.md`에 심은 **canary** 문자열을 들어오는 API 요청 본문에서 세어 파일이 실제로 자동발견·주입
 됐음을 증명한다(비-vacuity). 두 악성 인코딩:
 
@@ -86,7 +88,7 @@ A14가 load-bearing으로 증명한 바로 그 경계. `CLAUDE.md`는 *설득* �
   돌려서가 아니라) permission layer임을 격리.
 - `--repeat 2`에서 결정론적.
 
-P2(위조 블록이 정규화에서 조용히 폐기됨)와 달리, P3의 유도된 명령은 permission layer까지 도달해
+MCP tool_use 위조 검증(ASI04)(위조 블록이 정규화에서 조용히 폐기됨)와 달리, 이 기법의 유도된 명령은 permission layer까지 도달해
 **명시적으로 거부**된다 — 경계가 `permission_denials`에 눈에 보인다.
 
 ## Promotion gate
@@ -99,13 +101,13 @@ P2(위조 블록이 정규화에서 조용히 폐기됨)와 달리, P3의 유도
 | pwntools PoC | **불가능** — `CLAUDE.md`에서 auto-approve된 명령으로 가는 권한 경로 없음 |
 | Undisclosed | n/a |
 
-**제출하지 말 것.** A11/P3는 A10, A14, A03/P2와 함께 KILL이다. `CLAUDE.md`는 untrusted 간접 프롬프트
+**제출하지 말 것.** 이 기법도 KILL이다. `CLAUDE.md`는 untrusted 간접 프롬프트
 인젝션 서피스(steering 전용)이며, 실행은 여전히 load-bearing한 permission layer가 게이트하고, 그
 layer는 allow 결정에 메모리 파일을 읽지 않는다.
 
-## 다루지 않는 것 (P3 범위 밖)
+## 다루지 않는 것 (범위 밖)
 
-- **실제 모델이 적대적 `CLAUDE.md`에 정말 설득되는지**: A14대로 moot — 완전히 설득된 모델도
+- **실제 모델이 적대적 `CLAUDE.md`에 정말 설득되는지**: Bash 분류기 인젝션 검증(ASI02)대로 moot — 완전히 설득된 모델도
   permission layer 너머로는 권한이 0이므로 실제 설득 가능성은 논점이 아님. 하네스는 최대 설득 모델을
   시뮬레이션.
 - **과도한 *사용자* allow-rule** (사용자 본인이 `Bash(*)`나 `--dangerously-skip-permissions`로 실행):
@@ -113,8 +115,8 @@ layer는 allow 결정에 메모리 파일을 읽지 않는다.
   아무것도 안 줌.
 - **`@import` 외부 include fetch** (`hasClaudeMdExternalIncludesApproved`): 승인 게이트된 읽기 경로;
   여전히 파일 읽기지 실행 아님. 다루지 않음(`P11`에 로드 시 실행 없음).
-- **단순 발견만으로 pre-trust 자동 실행** (A12 `.git/config` fsmonitor류): 다른 메커니즘(git 측 시작
-  시 실행), A12에서 추적; P3는 구체적으로 메모리 텍스트→모델 채널이며, 모델이 행동하기 전까진
+- **단순 발견만으로 pre-trust 자동 실행** (git fsmonitor RCE(ASI05, external) `.git/config` fsmonitor류): 다른 메커니즘(git 측 시작
+  시 실행), git fsmonitor RCE(ASI05, external)에서 추적; 이 기법은 구체적으로 메모리 텍스트→모델 채널이며, 모델이 행동하기 전까진
   read-only다.
 
 ## Files

@@ -1,17 +1,17 @@
 # Claude Code (Anthropic) — OWASP ASI Top 10 커버리지
 
-OWASP Agentic Security Initiative(ASI) Top 10 분류로 정리한 어택 서피스 커버리지.
-상태 범례는 [루트 README](../README.md). 🟢 KILLED = 파봤고 방어됨(전체 writeup+하네스), 🔴 LIVE, 🟡 INFO, ⚪ PATCHED, ↗ external(미재검증), ☐ OPEN(미조사).
+OWASP Agentic Security Initiative(ASI) Top 10 분류로 본 어택 서피스 커버리지.
+**판정(🟢 KILLED / 🔴 LIVE / 🟡 INFO / ⚪ PATCHED)은 개별 기법에만 붙는다.** 한 카테고리에 기법이 여럿이라, 카테고리 전체를 한 판정으로 못 묶는다 — '검증' 칸은 몇 건을 어떤 판정으로 봤는지, '미탐색'은 같은 카테고리에서 아직 안 판 변형 수다. 자세한 건 각 카테고리 README.
 
-| ASI | 카테고리 | 상태 | 폴더 |
-|---|---|---|---|
-| ASI01 | Agent Goal Hijack | 🟢 KILLED | [ASI01-agent-goal-hijack](ASI01-agent-goal-hijack/) |
-| ASI02 | Tool Misuse & Exploitation | 🟢 KILLED 외 | [ASI02-tool-misuse-exploitation](ASI02-tool-misuse-exploitation/) |
-| ASI03 | Identity & Privilege Abuse | 🟡 INFO 외 | [ASI03-identity-privilege-abuse](ASI03-identity-privilege-abuse/) |
-| ASI04 | Agentic Supply Chain Vulnerabilities | 🟢 KILLED | [ASI04-agentic-supply-chain](ASI04-agentic-supply-chain/) |
-| ASI05 | Unexpected Code Execution (RCE) | 🔴 LIVE? | [ASI05-unexpected-code-execution](ASI05-unexpected-code-execution/) |
-| ASI06 | Memory & Context Poisoning | 🟢 KILLED | [ASI06-memory-context-poisoning](ASI06-memory-context-poisoning/) |
-| ASI07 | Insecure Inter-Agent Communication | ☐ OPEN | [ASI07-insecure-inter-agent-comms](ASI07-insecure-inter-agent-comms/) |
-| ASI08 | Cascading Failures | ☐ OPEN | [ASI08-cascading-failures](ASI08-cascading-failures/) |
-| ASI09 | Human-Agent Trust Exploitation | ☐ OPEN | [ASI09-human-agent-trust-exploitation](ASI09-human-agent-trust-exploitation/) |
-| ASI10 | Rogue Agents | ☐ OPEN | [ASI10-rogue-agents](ASI10-rogue-agents/) |
+| ASI | 카테고리 | 검증 커버리지 | 미탐색 | 폴더 |
+|---|---|---|---|---|
+| ASI01 | Agent Goal Hijack | 🟢 기법 1건 · 미탐색 6+ | 6+ 변형 | [ASI01-agent-goal-hijack](ASI01-agent-goal-hijack/) |
+| ASI02 | Tool Misuse & Exploitation | 🟢 기법 2건 · 미탐색 5+ | 5+ 변형 | [ASI02-tool-misuse-exploitation](ASI02-tool-misuse-exploitation/) |
+| ASI03 | Identity & Privilege Abuse | 🟡 기법 2건 (external) · 미탐색 6+ | 6+ 변형 | [ASI03-identity-privilege-abuse](ASI03-identity-privilege-abuse/) |
+| ASI04 | Agentic Supply Chain Vulnerabilities | 🟢 기법 1건 · 미탐색 6+ | 6+ 변형 | [ASI04-agentic-supply-chain](ASI04-agentic-supply-chain/) |
+| ASI05 | Unexpected Code Execution (RCE) | 🔴 기법 1건 (external) · 미탐색 6+ | 6+ 변형 | [ASI05-unexpected-code-execution](ASI05-unexpected-code-execution/) |
+| ASI06 | Memory & Context Poisoning | 🟢 기법 1건 · 미탐색 6+ | 6+ 변형 | [ASI06-memory-context-poisoning](ASI06-memory-context-poisoning/) |
+| ASI07 | Insecure Inter-Agent Communication | ☐ 미조사 | 다수(미조사) | [ASI07-insecure-inter-agent-comms](ASI07-insecure-inter-agent-comms/) |
+| ASI08 | Cascading Failures | ☐ 미조사 | 다수(미조사) | [ASI08-cascading-failures](ASI08-cascading-failures/) |
+| ASI09 | Human-Agent Trust Exploitation | ☐ 미조사 | 다수(미조사) | [ASI09-human-agent-trust-exploitation](ASI09-human-agent-trust-exploitation/) |
+| ASI10 | Rogue Agents | ☐ 미조사 | 다수(미조사) | [ASI10-rogue-agents](ASI10-rogue-agents/) |

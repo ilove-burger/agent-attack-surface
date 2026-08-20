@@ -1,11 +1,13 @@
 > **Provenance:** 이 워크스페이스에서 `hunma_agent` marker-only 하네스(bwrap 격리, mock Anthropic
 > API, 실제 Claude Code 아티팩트 1.0.92 / 2.1.226 / 2.1.235)로 독립 검증.
-> **판정:** KILLED (architectural) · **제보:** 미제출(방어됨). 상위 [카테고리 인덱스](../README.md)와
-> repo 루트 [README](../../../README.md) 참고.
+> **분석 상태:** `배포 artifact 확인` · `E2E marker 재현(공격 실패 → 위조 폐기)` · `소스 확인(OBB 정규화 화이트리스트)` · `version boundary: 2.1.226 / 2.1.235 (E2E) · 1.0.92 (소스 확인)`
+> **시험한 보안 경계:** MCP `tool_result` content의 구조 ≠ 실행 가능한 `tool_use` provenance (assistant 턴에서만 인정)
+> **판정:** 공격 실패 — 불변식 유지 (제보 대상 아님). 상위 [카테고리 인덱스](../README.md) · repo 루트 [README](../../../README.md).
+> **OWASP ASI:** Primary **ASI04 Agentic Supply Chain** · Secondary ASI01 Agent Goal Hijack / ASI02 Tool Misuse
 >
 > 재현: 이 repo 옆에 `hunma_agent`를 클론하고 아래 **Files**에 적힌 `compare-claude-*` 스크립트 실행.
 
-# A03 / P2 — 악성 MCP 서버가 `tool_result` 안에 `tool_use`를 위조
+# 악성 MCP 서버가 `tool_result` 안에 `tool_use`를 위조
 
 **상태:** **KILLED (architectural)** — MCP 서버가 통제하는 `tool_result` 콘텐츠는 실행되는
 `tool_use`가 **될 수 없다**. Claude Code는 모든 MCP 콘텐츠 아이템을 **타입 화이트리스트**(1.0.92의
@@ -19,19 +21,19 @@ permission이 아니다. 2.1.226·2.1.235(바이너리)에서 결정론적으로
 (fixtures `harness/fixtures/claude-p2/{evil_mcp_server,mock_model_server,run_with_mock}.py`,
 cases `harness/cases/claude-p2-*.json`).
 
-## 가설 (P2, index 각도 A03)
+## 가설
 
 Anthropic Messages API는 **assistant가 emit한** `tool_use` 블록(Claude Code가 permission layer를
 거쳐 실행)과 **tool_result** 블록(user-role 메시지로 모델에 *되돌아* 들어오는 untrusted 데이터)을
 구분한다. 사용자가 연결한 — 그러나 악성이거나 탈취된 — MCP 서버가 `tool_result` 콘텐츠를 공급한다.
-P2의 질문:
+핵심 질문:
 
 > 악성 MCP 서버가 `tool_result`의 `content`에 `tool_use` 모양의 페이로드를 밀어넣어, Claude Code가
 > **provenance가 아니라 구조**를 기준으로 이를 실제 실행되는 tool 콜로 승격시키게 — 모델의 결정과
 > (선택적으로) permission 프롬프트를 우회하며 — 만들 수 있는가?
 
 이건 단순 설득형 IPI(모델을 꼬드겨 진짜 `tool_use`를 emit하게 하는 것 — downstream 방어는 Bash
-permission layer, A14 참고)와 구별되는 *구조적 위조* 해석이다. P2는 MCP 결과 수용 지점의 trust
+permission layer, Bash 분류기 인젝션 검증(ASI02) 참고)와 구별되는 *구조적 위조* 해석이다. 이 기법은 MCP 결과 수용 지점의 trust
 경계 자체를 노린다.
 
 ## 왜 죽었나 — MCP 콘텐츠는 text/image 화이트리스트
@@ -61,8 +63,8 @@ function OBB(A,B){switch(A.type){
   `[Resource link: …]`, `resource_link`; 2.1.235는 추가로 `[Audio from …]`/`[Image from …]` 라벨 — 여전히
   text/image만). 어떤 타깃에서도 MCP 콘텐츠 타입이 `tool_use` 블록을 만들지 않는다.
 
-즉 완벽히 악성인 MCP 서버라도 *모델이 읽는 텍스트*만 주입할 수 있다 — 그건 A11/P3/P4 영역(간접
-프롬프트 인젝션)이고, 그 유일한 downstream 실행 경로는 A14에서 이미 load-bearing으로 밝혀진 Bash
+즉 완벽히 악성인 MCP 서버라도 *모델이 읽는 텍스트*만 주입할 수 있다 — 그건 CLAUDE.md IPI 검증(ASI06)/WebFetch IPI 검증(ASI01) 영역(간접
+프롬프트 인젝션)이고, 그 유일한 downstream 실행 경로는 Bash 분류기 인젝션 검증(ASI02)에서 이미 load-bearing으로 밝혀진 Bash
 permission layer다.
 
 ## 결정론적 증명 (hunma 하네스)
@@ -129,15 +131,15 @@ auto-approve됐을 것이다; permission을 방벽 후보에서 일부러 제거
 | pwntools PoC | **불가능** — MCP 결과 콘텐츠에서 tool 콜로 가는 실행 경로 없음 |
 | Undisclosed | n/a |
 
-**제출하지 말 것.** A03/P2는 A10, A14와 함께 KILL이다. trust 경계가 구조적으로 유지된다:
+**제출하지 말 것.** 이 기법도 KILL이다. trust 경계가 구조적으로 유지된다:
 `tool_use`는 오직 assistant 턴에서만 인정되고, MCP 결과 콘텐츠는 text/image로 화이트리스트되어
 기껏해야 간접 프롬프트 인젝션 *텍스트*로만 작동하며, 그 실행은 여전히 모델이 진짜 `tool_use`를
 emit하고 (load-bearing한) Bash permission layer를 통과하는 데 달려 있다.
 
-## 다루지 않는 것 (P2 범위 밖)
+## 다루지 않는 것 (범위 밖)
 
-- **설득형 IPI** (MCP 결과 *텍스트*가 모델을 꼬드겨 진짜 Bash `tool_use`를 emit하게): A11/P3/P4
-  영역이고, MCP 정규화가 아니라 Bash permission layer가 방어. P2는 구체적으로 서버 콘텐츠로부터
+- **설득형 IPI** (MCP 결과 *텍스트*가 모델을 꼬드겨 진짜 Bash `tool_use`를 emit하게): CLAUDE.md IPI 검증(ASI06)/WebFetch IPI 검증(ASI01)
+  영역이고, MCP 정규화가 아니라 Bash permission layer가 방어. 이 기법은 구체적으로 서버 콘텐츠로부터
   `tool_use`를 *구조적으로* 위조하는 것이다.
 - **auto-approve된 MCP 툴 자체** (`Bash(mcp__server__*)`류 광범위 allow, `--dangerously-skip-permissions`):
   사용자 정책/동의 문제지 위조 버그가 아니다. 여기 MCP 툴은 명시적으로 allow된 정상 툴이고 적대적

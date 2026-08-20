@@ -1,11 +1,13 @@
 > **Provenance:** 이 워크스페이스에서 `hunma_agent` marker-only 하네스(bwrap 격리, mock Anthropic
 > API, 실제 Claude Code 아티팩트 1.0.92 / 2.1.226 / 2.1.235)로 독립 검증.
-> **판정:** KILLED (architectural) · **제보:** 미제출(방어됨). 상위 [카테고리 인덱스](../README.md)와
-> repo 루트 [README](../../../README.md) 참고.
+> **분석 상태:** `배포 artifact 확인` · `E2E marker 재현(공격 실패 → 불변식 유지)` · `fail-closed egress 정적 확인` · `version boundary: 1.0.92 / 2.1.226 / 2.1.235`
+> **시험한 보안 경계:** 외부 fetch로 전달된 웹 콘텐츠(untrusted `tool_result` 텍스트) ≠ tool 실행 권한
+> **판정:** 공격 실패 — 불변식 유지 (제보 대상 아님). 상위 [카테고리 인덱스](../README.md) · repo 루트 [README](../../../README.md).
+> **OWASP ASI:** Primary **ASI01 Agent Goal Hijack** · Secondary ASI02 Tool Misuse & Exploitation
 >
 > 재현: 이 repo 옆에 `hunma_agent`를 클론하고 아래 **Files**에 적힌 `compare-claude-*` 스크립트 실행.
 
-# A02 / P4 — WebFetch로 전달된 웹 콘텐츠 → 간접 프롬프트 인젝션 → Bash
+# WebFetch로 전달된 웹 콘텐츠 → 간접 프롬프트 인젝션 → Bash
 
 **상태:** **KILLED (architectural)** — 악성 페이지가 WebFetch로 *실제 fetch되고* 그 인젝션이
 WebFetch 요약기를 거쳐 메인 에이전트 컨텍스트까지 전파돼도, 그렇게 유도된 Bash 명령은
@@ -19,11 +21,11 @@ preflight 도메인 평판 게이트, 도메인 스코프 권한, `maxRedirects:
 (fixtures `harness/fixtures/claude-p4/{malicious_web_server,mock_model_server,run_with_mock}.py`,
 cases `harness/cases/claude-p4-*.json`).
 
-## 가설 (P4, index 각도 A02)
+## 가설
 
 Claude Code의 WebFetch 툴은 URL을 가져와 (HTML→markdown) 콘텐츠를 모델에 넣는다. 사용자가
 Claude에게 가져오게 한 페이지를 공격자가 통제하면, 거기 간접 프롬프트 인젝션을 심어 모델이 Bash
-명령을 실행하도록 유도할 수 있다. P4의 질문:
+명령을 실행하도록 유도할 수 있다. 핵심 질문:
 
 > WebFetch로 전달된 페이지가 Bash 명령을 auto-execute시킬 수 있는가 — 모델을 설득하거나, permission
 > layer가 인정하는 권한 부여를 밀어넣어서?
@@ -52,7 +54,7 @@ let I = await KhB(Y, B.signal, YN5);          // fetch, maxRedirects:0, 수동 r
 **Layer 2 — privilege (fetch된 콘텐츠는 권한을 못 줌).** fetch된 콘텐츠는 *별도* 서브모델 콜로
 요약되고, 메인 에이전트는 그 요약본만 `tool_result`로 받는다. 그 텍스트는 untrusted라 auto-approve
 rule engine에 절대 들어가지 않는다. 거기서 유도된 Bash 명령은 CLI/settings allow-rule + 코드
-분류기가 결정한다 — A14가 load-bearing으로 증명한 바로 그 경계.
+분류기가 결정한다 — Bash 분류기 인젝션 검증(ASI02)가 load-bearing으로 증명한 바로 그 경계.
 
 ## 결정론적 증명 (hunma 하네스)
 
@@ -105,13 +107,13 @@ worst case를 end-to-end로 몰아간다:
 | pwntools PoC | **불가능** — fetch된 콘텐츠에서 auto-approve된 명령으로 가는 권한 경로 없음 |
 | Undisclosed | n/a |
 
-**제출하지 말 것.** A02/P4는 A10, A14, A03/P2, A11/P3와 함께 KILL이다. WebFetch 콘텐츠는
+**제출하지 말 것.** 이 기법도 KILL이다(같은 repo의 ASI02 Bash 분류기 인젝션, ASI04 MCP tool_use 위조, ASI06 CLAUDE.md IPI와 동일한 결론). WebFetch 콘텐츠는
 fail-closed egress 통제 뒤의 untrusted IPI 서피스(steering 전용)이며, 실행은 여전히 load-bearing한
 permission layer가 게이트하고, 그 layer는 allow 결정에 fetch된 콘텐츠를 읽지 않는다.
 
-## 다루지 않는 것 (P4 범위 밖)
+## 다루지 않는 것 (범위 밖)
 
-- **요약기/메인 에이전트의 실제 설득 가능성**: A14 논리로 moot — 하네스는 최대 설득을 가정(요약기가
+- **요약기/메인 에이전트의 실제 설득 가능성**: Bash 분류기 인젝션 검증(ASI02) 논리로 moot — 하네스는 최대 설득을 가정(요약기가
   공격을 통과시키고 메인 에이전트가 따름)하고도 얻는 권한이 0.
 - **과도한 사용자 allow-rule**(`Bash(*)`, `--dangerously-skip-permissions`): 그러면 유도된 명령이
   실행됨 — WebFetch 버그가 아니라 사용자 정책 문제. deny 케이스는 아무 권한도 안 줌.

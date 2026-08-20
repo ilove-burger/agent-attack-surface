@@ -1,7 +1,7 @@
 > **Provenance:** 이 워크스페이스에서 `hunma_agent` marker-only 하네스(bwrap 격리, mock Anthropic
 > API, 실제 Claude Code 아티팩트 1.0.92 / 2.1.226 / 2.1.235)로 독립 검증.
-> **판정:** KILLED (architectural) · **제보:** 미제출(방어됨). [../_COVERAGE.md](../_COVERAGE.md)와
-> 루트 [README](../../README.md) 참고.
+> **판정:** KILLED (architectural) · **제보:** 미제출(방어됨). 상위 [카테고리 인덱스](../README.md)와
+> repo 루트 [README](../../../README.md) 참고.
 >
 > 재현: 이 repo 옆에 `hunma_agent`를 클론하고 아래 **Files**에 적힌 `compare-claude-*` 스크립트 실행.
 

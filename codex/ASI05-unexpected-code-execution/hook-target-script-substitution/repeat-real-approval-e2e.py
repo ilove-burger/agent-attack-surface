@@ -26,6 +26,10 @@ DEFAULT_WORK_ROOT = Path(
     "/home/mjhy3/agent/hunting-box/work/"
     "codex-hook-real-approval-stability"
 )
+DEFAULT_GIT_PULL_WORK_ROOT = Path(
+    "/home/mjhy3/agent/hunting-box/work/"
+    "codex-hook-git-pull-stability-v2"
+)
 
 
 def utc_now() -> str:
@@ -73,6 +77,7 @@ def summarize_result(
     record.update(
         {
             "approval_transport": data.get("approval_transport"),
+            "substitution": data.get("substitution", "direct"),
             "codex_version": data.get("codex_version"),
             "codex_sha256": data.get("codex_sha256"),
             "bypass_flag_used": data.get("bypass_flag_used"),
@@ -88,6 +93,8 @@ def summarize_result(
                 data.get("substitution_checks") or {}
             ).get("key_unchanged", False),
             "marker_observed": data.get("marker_observed", False),
+            "delivery_checks": data.get("delivery_checks") or {},
+            "changed_files": (data.get("delivery") or {}).get("changed_files"),
             "exec_returncode": data.get("exec_returncode"),
             "whoami": one_line(data.get("whoami")),
             "pass": process.returncode == 0 and data.get("pass") is True,
@@ -103,17 +110,18 @@ def markdown_summary(summary: dict[str, Any]) -> str:
         f"- 생성 시각(UTC): `{summary['finished_at']}`",
         f"- Codex: `{summary.get('codex_version')}`",
         f"- Binary SHA-256: `{summary.get('codex_sha256')}`",
+        f"- 스크립트 전달 방식: `{summary['substitution']}`",
         f"- 반복: UI `{summary['repeat']}`회 + API `{summary['repeat']}`회",
         f"- 통과: `{summary['passed_runs']}/{summary['total_runs']}`",
         f"- 안정성 판정: `{'PASS' if summary['stability_pass'] else 'FAIL'}`",
         "",
-        "| 승인 | Run | 결과 | 승인 전 | 승인 후 | 치환 후 | Hash 불변 | Marker | Exec RC | 시간(초) | run_dir |",
-        "|---|---:|---|---|---|---|---|---|---:|---:|---|",
+        "| 승인 | Run | 결과 | 승인 전 | 승인 후 | 치환 후 | Hash 불변 | 전달 검증 | Marker | Exec RC | 시간(초) | run_dir |",
+        "|---|---:|---|---|---|---|---|---|---|---:|---:|---|",
     ]
     for run in summary["runs"]:
         lines.append(
             "| {approval} | {run} | {result} | {before} | {after_approval} | "
-            "{after_swap} | {hash_same} | {marker} | {exec_rc} | {duration} | "
+            "{after_swap} | {hash_same} | {delivery} | {marker} | {exec_rc} | {duration} | "
             "`{run_dir}` |".format(
                 approval=run["approval"].upper(),
                 run=run["run"],
@@ -122,6 +130,7 @@ def markdown_summary(summary: dict[str, Any]) -> str:
                 after_approval=run.get("after_approval"),
                 after_swap=run.get("after_swap"),
                 hash_same=run.get("hash_unchanged_after_swap"),
+                delivery=all(run.get("delivery_checks", {}).values()),
                 marker=run.get("marker_observed"),
                 exec_rc=run.get("exec_returncode"),
                 duration=run["duration_seconds"],
@@ -143,7 +152,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repeat", type=int, default=3)
     parser.add_argument("--codex", type=Path, default=DEFAULT_CODEX)
-    parser.add_argument("--work-root", type=Path, default=DEFAULT_WORK_ROOT)
+    parser.add_argument("--work-root", type=Path)
+    parser.add_argument(
+        "--substitution",
+        choices=("direct", "git-pull"),
+        default="direct",
+    )
     args = parser.parse_args()
     if args.repeat < 1:
         parser.error("--repeat must be at least 1")
@@ -151,7 +165,15 @@ def main() -> int:
     codex = args.codex.resolve()
     if not codex.is_file():
         parser.error(f"Codex binary not found: {codex}")
-    work_root = args.work_root.resolve()
+    work_root = (
+        args.work_root
+        if args.work_root is not None
+        else (
+            DEFAULT_GIT_PULL_WORK_ROOT
+            if args.substitution == "git-pull"
+            else DEFAULT_WORK_ROOT
+        )
+    ).resolve()
     work_root.mkdir(parents=True, exist_ok=True)
     started_at = utc_now()
     runs: list[dict[str, Any]] = []
@@ -168,6 +190,8 @@ def main() -> int:
                 str(codex),
                 "--run-dir",
                 str(run_dir),
+                "--substitution",
+                args.substitution,
             ]
             print(
                 f"[{approval.upper()} {run_number}/{args.repeat}] {run_dir}",
@@ -204,6 +228,7 @@ def main() -> int:
         "started_at": started_at,
         "finished_at": utc_now(),
         "repeat": args.repeat,
+        "substitution": args.substitution,
         "total_runs": len(runs),
         "passed_runs": passed_runs,
         "failed_runs": len(runs) - passed_runs,

@@ -1,9 +1,9 @@
 # 승인된 project hook의 대상 스크립트 치환 → sandbox-외부 same-user 코드 실행
 
-> **Provenance:** 이 워크스페이스에서 소스 분석 + unit test + E2E로 독립 재현 (OpenAI Codex CLI, 0.148.0).
+> **Provenance:** 이 워크스페이스에서 소스 분석 + unit test + E2E로 독립 재현 (OpenAI Codex CLI, 0.148.0/0.149.0).
 > **분석 상태:** `소스 확인(rust-v0.148.0)` · `unit test 재현` · `E2E sink 재현` · `실제 UI/API 승인 E2E 재현(bypass 없이)`
 > **시험한 보안 경계:** 승인된 hook의 trust 해시가 커버하는 대상 ≠ 실제 실행되는 스크립트 파일의 내용
-> **판정:** 🔴 **LIVE (미패치 0-day 후보)** · **제보:** 진행 예정 (OpenAI Codex). 상위 [카테고리 인덱스](../README.md) · repo 루트 [README](../../../README.md).
+> **판정:** 🔴 **LIVE (0.149.0 재현, 미패치 0-day 후보)** · **제보:** 진행 예정 (OpenAI Codex). 상위 [카테고리 인덱스](../README.md) · repo 루트 [README](../../../README.md).
 > **OWASP ASI:** Primary **ASI05 Unexpected Code Execution (RCE)** · Secondary ASI02 Tool Misuse & Exploitation
 > **CWE(잠정):** CWE-345 (Insufficient Verification of Data Authenticity), 관련 CWE-353
 >
@@ -32,7 +32,7 @@ command 문자열}`만 TOML 직렬화해 해싱. 참조 스크립트의 content/
 sink — `command_runner.rs`: unix에서 `#[cfg(not(windows))] command.spawn()` (비샌드박스), `env_clear()`
 안 함(부모 환경 상속). `spawn_contained`는 Windows JobObject 전용이라 샌드박스 아님.
 
-0.147→0.148 diff는 cosmetic — 해시 로직 불변. 최신에도 유효.
+0.147→0.148 diff는 cosmetic이며, npm 배포본 0.149.0 실제 승인 E2E에서도 동일 결함을 확인했다.
 
 ## 공격 흐름
 
@@ -132,7 +132,8 @@ UI 모드는 fresh `CODEX_HOME`에서 Codex가 표시하는 startup hook review 
 
 ### 반복 안정성 결과
 
-2026-08-21 KST에 고정된 `codex-cli 0.148.0` 바이너리로 UI 3회와 API 3회를 독립 실행했다. 여섯 번
-모두 `untrusted → trusted → 치환 후 trusted`, hash 불변, outside marker 생성, `pass=true`를 만족했다.
-집계 판정은 **`STABILITY PASS: 6/6`**이다. 상세 환경·개별 결과 hash는
+2026-08-21 KST에 고정된 `codex-cli 0.148.0` direct 치환과 `0.149.0` 실제 `git pull` 치환을 각각
+UI 3회/API 3회 실행했다. 두 버전의 총 12회 모두 `untrusted → trusted → 치환 후 trusted`, hash 불변,
+outside marker 생성, `pass=true`를 만족했다. 각 집계 판정은 **`STABILITY PASS: 6/6`**이다.
+상세 환경·개별 결과 hash는
 [`STABILITY_EVIDENCE.md`](STABILITY_EVIDENCE.md)에 기록했다.

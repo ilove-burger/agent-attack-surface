@@ -58,6 +58,48 @@ loopback mock으로 제한했고 실제 API key 대신 `sk-e2e-dummy-no-secret`�
 `approval-ui.log`도 있다. raw UI run의 `auth.json`에는 명시적인 dummy key만 있으며 실제 비밀정보는
 없다. 외부 제출 bundle에서는 `codex-home/auth.json` 전체를 제외한다.
 
+## 0.149.0 실제 `git pull` 반복 재검증
+
+> 실행 시각: 2026-08-21 21:45:45–21:46:59 KST
+> 판정: **PASS — UI 3/3 + API 3/3, 총 6/6**
+
+| 항목 | 값 |
+|---|---|
+| Codex | `codex-cli 0.149.0` |
+| npm archive SHA-256 | `e06f3d106fe8bb058a6bfd30075d89ea17deaee7c8425e0c5d23072df0fdd0e7` |
+| Binary SHA-256 | `bbc3341e44c9ead340ed9570c17be936e37870f570751a941699ffd04d672827` |
+| 치환 경로 | 별도 local origin에서 `git pull --ff-only` |
+| 변경 파일 | `.codex/hk.sh`만 변경 |
+| Trust bypass | 사용하지 않음 |
+| `--skip-git-repo-check` | 사용하지 않음 |
+
+모든 run에서 실제 Git commit이 변경되고 victim worktree가 clean인 상태로 유지됐다. `hooks.json`은
+변경되지 않았고 대상 스크립트 내용만 바뀌었지만 `key/currentHash`와 `Trusted` 상태가 유지됐으며,
+이후 repo 밖 marker가 생성됐다.
+
+| 승인 | Run | 결과 | 치환 후 | Hash 불변 | Marker | 시간(초) | `result.json` SHA-256 |
+|---|---:|---|---|---|---|---:|---|
+| UI | 1 | PASS | trusted | true | true | 12.022 | `d086f1e572fc5eff994934a91381369fde28ba60280f1245d7b1dfeb5c4e49ab` |
+| UI | 2 | PASS | trusted | true | true | 14.215 | `e87004de9e74e09ef948cc4645abff25bebcf5906d05fc021f70c6c6a6c97153` |
+| UI | 3 | PASS | trusted | true | true | 13.517 | `58ddb7dc7ebc953f03d79fec1ed42d9393e6ccf78cd767422884a40c5012fafa` |
+| API | 1 | PASS | trusted | true | true | 12.238 | `af886e0108296122ac9a6f72acca2485bea05ef84ad99045afc9855b6c33baef` |
+| API | 2 | PASS | trusted | true | true | 9.881 | `480685e1f944213def71d6dbeb8043420aec023ee80e1b67ca904e6ce7e48c52` |
+| API | 3 | PASS | trusted | true | true | 12.045 | `1e5a2e4fe6f3c276dc885508759ef617f33e4db9adf50f207d3bd26b05e0f253` |
+
+Raw evidence:
+
+```text
+/home/mjhy3/agent/hunting-box/work/codex-hook-0.149.0-git-pull-stability/
+```
+
+집계 파일 무결성:
+
+```text
+ff4b068ffe8b3dfc306bbe661532c6602996580e807147d83f0746621c98b0b5  summary.json
+113900a6b37e005bc3115192fe7d060b7a383e7a85f104fa14c49d6293cec3ff  results.jsonl
+601aece62ecda6a0797132bb6b0829423fb8d8d0a54adf087e35100d1f9efa72  summary.md
+```
+
 ## 재실행
 
 ```bash

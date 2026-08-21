@@ -1,0 +1,96 @@
+diff --git a/codex-rs/memories/write/src/startup_tests.rs b/codex-rs/memories/write/src/startup_tests.rs
+index df18be0f27..4613f7735a 100644
+--- a/codex-rs/memories/write/src/startup_tests.rs
++++ b/codex-rs/memories/write/src/startup_tests.rs
+@@ -35,8 +35,10 @@ use core_test_support::responses::ResponseMock;
+ use core_test_support::responses::ResponsesRequest;
+ use core_test_support::responses::ev_assistant_message;
+ use core_test_support::responses::ev_completed;
++use core_test_support::responses::ev_function_call;
+ use core_test_support::responses::ev_response_created;
+ use core_test_support::responses::mount_sse_once;
++use core_test_support::responses::mount_sse_sequence;
+ use core_test_support::responses::sse;
+ use core_test_support::responses::start_mock_server;
+ use core_test_support::test_codex::TestCodex;
+@@ -154,6 +156,80 @@ async fn memories_startup_phase2_tracks_workspace_diff_across_runs() -> anyhow::
+     Ok(())
+ }
+ 
++#[tokio::test]
++async fn memories_startup_phase2_can_consolidate_resource_marker_into_summary() -> anyhow::Result<()>
++{
++    const RESOURCE_MARKER: &str = "MCP_RESOURCE_MEMORY_MARKER_7f50c6";
++
++    let server = start_mock_server().await;
++    let home = Arc::new(TempDir::new()?);
++    let test = build_test_codex(&server, Arc::clone(&home)).await?;
++    let provider = Arc::new(MockMemoryModelProvider::new(
++        test.config.model_provider.clone(),
++        Some(test.thread_manager.auth_manager()),
++    ));
++    let db = test
++        .codex
++        .state_db()
++        .ok_or_else(|| anyhow::anyhow!("state db should be enabled for memory startup test"))?;
++    seed_stage1_output(
++        db.as_ref(),
++        home.path(),
++        chrono::Utc::now(),
++        &format!("resource-derived instruction {RESOURCE_MARKER}"),
++        &format!("resource-derived summary {RESOURCE_MARKER}"),
++        "mcp-resource-marker",
++    )
++    .await?;
++
++    let shell_args = serde_json::json!({
++        "cmd": format!(
++            "grep {RESOURCE_MARKER} raw_memories.md >/dev/null && printf '%s\\n' 'memory {RESOURCE_MARKER}' > MEMORY.md && printf '%s\\n' 'v1' '' 'summary {RESOURCE_MARKER}' > memory_summary.md"
++        ),
++        "login": false,
++    });
++    let responses = mount_sse_sequence(
++        &server,
++        vec![
++            sse(vec![
++                ev_response_created("resp-phase2-resource-write"),
++                ev_function_call(
++                    "phase2-resource-write",
++                    "exec_command",
++                    &serde_json::to_string(&shell_args)?,
++                ),
++                ev_completed("resp-phase2-resource-write"),
++            ]),
++            sse(vec![
++                ev_assistant_message("msg-phase2-resource-complete", "phase2 complete"),
++                ev_completed("resp-phase2-resource-complete"),
++            ]),
++        ],
++    )
++    .await;
++
++    let (context, config) = memory_startup_context_with_provider(&test, provider).await;
++    phase2::run(
++        context,
++        Arc::clone(&config),
++        codex_protocol::models::PermissionProfile::Disabled,
++    )
++    .await;
++    wait_for_phase2_workspace_reset(db.as_ref(), &memory_root(&config.codex_home)).await?;
++
++    let requests = wait_for_request(&responses, /*expected_count*/ 2).await;
++    assert!(requests[0].body_contains_text("phase2_workspace_diff.md"));
++    assert!(requests[1].body_contains_text(RESOURCE_MARKER));
++    assert!(
++        tokio::fs::read_to_string(memory_root(&config.codex_home).join("memory_summary.md"))
++            .await?
++            .contains(RESOURCE_MARKER)
++    );
++
++    shutdown_test_codex(&test).await?;
++    Ok(())
++}
++
+ #[tokio::test]
+ async fn phase2_retries_when_clean_workspace_is_missing_artifacts() -> anyhow::Result<()> {
+     let server = start_mock_server().await;

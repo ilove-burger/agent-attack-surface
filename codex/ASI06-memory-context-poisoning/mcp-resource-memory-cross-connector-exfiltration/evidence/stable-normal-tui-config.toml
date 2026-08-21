@@ -1,0 +1,17 @@
+[features]
+memories = true
+
+[memories]
+disable_on_external_context = true
+generate_memories = true
+use_memories = true
+min_rollout_idle_hours = 1
+min_rate_limit_remaining_percent = 0
+max_rollouts_per_startup = 10
+
+[mcp_servers.rmcp]
+command = "/path/to/codex-rs/target/debug/test_stdio_server"
+startup_timeout_sec = 20
+
+[projects."/path/to/isolated/workspace"]
+trust_level = "trusted"

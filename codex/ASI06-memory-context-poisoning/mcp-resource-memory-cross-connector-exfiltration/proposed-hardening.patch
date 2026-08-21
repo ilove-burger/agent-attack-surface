@@ -1,0 +1,27 @@
+diff --git a/codex-rs/core/src/tools/handlers/mcp_resource.rs b/codex-rs/core/src/tools/handlers/mcp_resource.rs
+index deb7491e75..fda8a3ae98 100644
+--- a/codex-rs/core/src/tools/handlers/mcp_resource.rs
++++ b/codex-rs/core/src/tools/handlers/mcp_resource.rs
+@@ -31,6 +31,7 @@ use crate::tools::context::FunctionToolOutput;
+ use crate::tools::context::ToolOutput;
+ use crate::tools::context::boxed_tool_output;
+ use codex_protocol::protocol::McpInvocation;
++use codex_rollout::state_db;
+ 
+ mod list_mcp_resource_templates;
+ mod list_mcp_resources;
+@@ -287,6 +288,14 @@ async fn run_resource_operation<T>(
+ where
+     T: Serialize,
+ {
++    if turn.config.memories.disable_on_external_context {
++        state_db::mark_thread_memory_mode_polluted(
++            session.services.state_db.as_deref(),
++            session.thread_id,
++            "mcp_resource_call",
++        )
++        .await;
++    }
+     emit_tool_call_begin(session, turn, call_id, invocation.clone()).await;
+     let start = Instant::now();
+     let result = operation.await.and_then(|payload| {

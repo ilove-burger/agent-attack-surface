@@ -1,0 +1,93 @@
+diff --git a/codex-rs/memories/write/src/startup_tests.rs b/codex-rs/memories/write/src/startup_tests.rs
+index df18be0f27..e7467b86c5 100644
+--- a/codex-rs/memories/write/src/startup_tests.rs
++++ b/codex-rs/memories/write/src/startup_tests.rs
+@@ -459,6 +459,88 @@ async fn memories_startup_phase1_explicit_model_override_drives_request_model()
+     Ok(())
+ }
+ 
++#[tokio::test]
++async fn memories_startup_phase1_persists_mcp_resource_output_marker() -> anyhow::Result<()> {
++    const RESOURCE_MARKER: &str = "MCP_RESOURCE_MEMORY_MARKER_7f50c6";
++
++    let server = start_mock_server().await;
++    let home = Arc::new(TempDir::new()?);
++    let test = build_test_codex(&server, Arc::clone(&home)).await?;
++    let provider = Arc::new(MockMemoryModelProvider::new(
++        test.config.model_provider.clone(),
++        Some(test.thread_manager.auth_manager()),
++    ));
++    let db = test
++        .codex
++        .state_db()
++        .ok_or_else(|| anyhow::anyhow!("state db should be enabled for memory startup test"))?;
++    let thread_id = seed_stage1_candidate(
++        db.as_ref(),
++        home.path(),
++        chrono::Utc::now() - chrono::Duration::hours(2),
++        "mcp-resource-marker",
++    )
++    .await?;
++    let thread = db
++        .get_thread(thread_id)
++        .await?
++        .ok_or_else(|| anyhow::anyhow!("seeded thread should exist"))?;
++    let resource_line = RolloutLine {
++        timestamp: chrono::Utc::now().to_rfc3339(),
++        ordinal: None,
++        item: RolloutItem::ResponseItem(
++            ResponseItem::FunctionCallOutput {
++                id: None,
++                call_id: "read-resource-123".to_string(),
++                output: codex_protocol::models::FunctionCallOutputPayload::from_text(format!(
++                    r#"{{"server":"rmcp","contents":[{{"text":"{RESOURCE_MARKER}"}}]}}"#
++                )),
++                internal_chat_message_metadata_passthrough: None,
++            }
++            .into(),
++        ),
++    };
++    tokio::fs::write(
++        &thread.rollout_path,
++        format!("{}\n", serde_json::to_string(&resource_line)?),
++    )
++    .await?;
++
++    let response = mount_sse_once(
++        &server,
++        sse(vec![
++            ev_response_created("resp-phase1-resource"),
++            ev_assistant_message(
++                "msg-phase1-resource",
++                &format!(
++                    r#"{{"raw_memory":"resource marker {RESOURCE_MARKER}","rollout_summary":"resource summary {RESOURCE_MARKER}","rollout_slug":"mcp-resource-marker"}}"#
++                ),
++            ),
++            ev_completed("resp-phase1-resource"),
++        ]),
++    )
++    .await;
++
++    let (context, config) = memory_startup_context_with_provider(&test, provider).await;
++    phase1::run(context, config).await;
++    let request = wait_for_single_request(&response).await;
++    assert!(request.body_contains_text(RESOURCE_MARKER));
++
++    let memories = db
++        .memories()
++        .get_phase2_input_selection(/*n*/ 10, /*max_unused_days*/ 1)
++        .await?;
++    let memory = memories
++        .iter()
++        .find(|memory| memory.thread_id == thread_id)
++        .ok_or_else(|| anyhow::anyhow!("phase-1 output should be selected for phase 2"))?;
++    assert!(memory.raw_memory.contains(RESOURCE_MARKER));
++    assert!(memory.rollout_summary.contains(RESOURCE_MARKER));
++
++    shutdown_test_codex(&test).await?;
++    Ok(())
++}
++
+ #[tokio::test]
+ async fn memories_startup_phase2_explicit_model_override_drives_request_model() -> anyhow::Result<()>
+ {

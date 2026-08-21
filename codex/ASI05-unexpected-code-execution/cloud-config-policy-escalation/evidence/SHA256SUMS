@@ -1,0 +1,6 @@
+8719880cc0ed940fb1e0ea366167fefb073620eda9a916f04ffb3be76f2d5df5  ./DISCLOSURE.md
+aba7729819f6ce1013b55775e2aa84df80e2934e4cb325d37ce7810b7c824687  ./README.md
+1e55d3e76ac41e34a7b056c970b1f35fe3412635cd1cebc40d60004d5f14f610  ./actual-cli-e2e.patch
+aedf18ddb7cc95c105d7117bb6fed4f4a45dc530abbf64bc04c8172f57b7af2a  ./cloud-config-hmac-proof.patch
+fe690b9e5810995c06dde9cb20c80d11afbcdb208b8b364fe96a87d1da4ec4db  ./evidence/OBSERVED_RESULTS.md
+7fbb214df645c6b920de97d883c4f1bde8381a15e11fd769d9af315837bac325  ./run-proof.sh

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "fixture_only": true,
+  "uses_codex_or_model": false,
+  "uses_real_secret": false,
+  "checks": {
+    "source_has_resource_capability": true,
+    "registry_has_no_resource_capability": true,
+    "observer_has_no_resource_capability": true,
+    "source_lists_one_issue": true,
+    "source_record_loaded": true,
+    "registry_lists_one_tool": true,
+    "observer_lists_one_tool": true,
+    "synthetic_canary_crossed_connector": true
+  },
+  "verdict": "PASS"
+}
+

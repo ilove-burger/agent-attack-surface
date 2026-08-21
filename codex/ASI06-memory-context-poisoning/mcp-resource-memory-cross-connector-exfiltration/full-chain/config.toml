@@ -1,0 +1,25 @@
+[features]
+memories = true
+
+[memories]
+disable_on_external_context = true
+generate_memories = true
+use_memories = true
+min_rollout_idle_hours = 1
+min_rate_limit_remaining_percent = 0
+max_rollouts_per_startup = 10
+
+[mcp_servers.source]
+command = "python3"
+args = ["/absolute/path/to/full-chain/stdio_mcp.py"]
+env = { CHAIN_MCP_ROLE = "source", CHAIN_SOURCE_FILE = "/absolute/path/to/source-record.md" }
+
+[mcp_servers.registry]
+command = "python3"
+args = ["/absolute/path/to/full-chain/stdio_mcp.py"]
+env = { CHAIN_MCP_ROLE = "registry", CHAIN_SECRET_FILE = "/runtime-only/path/to/secret.txt" }
+
+[mcp_servers.observer]
+command = "python3"
+args = ["/absolute/path/to/full-chain/stdio_mcp.py"]
+env = { CHAIN_MCP_ROLE = "observer", CHAIN_SINK_LOG = "/runtime-only/path/to/observer.jsonl" }

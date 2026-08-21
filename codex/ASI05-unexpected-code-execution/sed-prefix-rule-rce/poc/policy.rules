@@ -1,0 +1,11 @@
+prefix_rule(
+    pattern = [
+        "sed",
+        "-n",
+        "1,260p",
+        "/tmp/codex-sed-poc-input.txt",
+    ],
+    decision = "allow",
+    justification = "Harmless policy-matcher reproduction for a fixed sed read",
+)
+

@@ -8,7 +8,7 @@ OWASP Agentic Security Initiative(ASI) Top 10 분류로 본 어택 서피스 커
 | ASI01 | Agent Goal Hijack | ☐ 미조사 | 다수(미조사) | [ASI01-agent-goal-hijack](ASI01-agent-goal-hijack/) |
 | ASI02 | Tool Misuse & Exploitation | 🔴 기법 1건(LIVE, 제보 예정) · 미탐색 4+ | 4+ 변형 | [ASI02-tool-misuse-exploitation](ASI02-tool-misuse-exploitation/) |
 | ASI03 | Identity & Privilege Abuse | ☐ 미조사 | 다수(미조사) | [ASI03-identity-privilege-abuse](ASI03-identity-privilege-abuse/) |
-| ASI04 | Agentic Supply Chain Vulnerabilities | 🟢 기법 1건 · 미탐색 4+ | 4+ 변형 | [ASI04-agentic-supply-chain](ASI04-agentic-supply-chain/) |
+| ASI04 | Agentic Supply Chain Vulnerabilities | 🔴 기법 2건(1건 LIVE 미패치 후보, 1건 기지정 CVE 재현) · 미탐색 4+ | 4+ 변형 | [ASI04-agentic-supply-chain](ASI04-agentic-supply-chain/) |
 | ASI05 | Unexpected Code Execution (RCE) | 🔴 기법 5건(LIVE/조건부 후보, 제보 예정) · 미탐색 2+ | 2+ 변형 | [ASI05-unexpected-code-execution](ASI05-unexpected-code-execution/) |
 | ASI06 | Memory & Context Poisoning | 🔴 기법 1건(LIVE primitive/조건부 full-chain, 제보 예정) · 미탐색 3+ | 3+ 변형 | [ASI06-memory-context-poisoning](ASI06-memory-context-poisoning/) |
 | ASI07 | Insecure Inter-Agent Communication | ☐ 미조사 | 다수(미조사) | [ASI07-insecure-inter-agent-comms](ASI07-insecure-inter-agent-comms/) |

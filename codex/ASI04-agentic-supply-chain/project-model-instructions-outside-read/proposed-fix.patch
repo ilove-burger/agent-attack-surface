@@ -1,0 +1,94 @@
+diff --git a/codex-rs/config/src/loader/mod.rs b/codex-rs/config/src/loader/mod.rs
+index f601250f9d..618e30578d 100644
+--- a/codex-rs/config/src/loader/mod.rs
++++ b/codex-rs/config/src/loader/mod.rs
+@@ -1360,10 +1360,17 @@ async fn load_project_layers(
+         strict_config,
+     )
+     .await?;
++    let mut startup_warnings = discovered.startup_warnings;
+     let mut layers = Vec::with_capacity(discovered.layers.len());
+     for layer in discovered.layers {
+         let config =
+             resolve_relative_paths_in_config_toml(layer.config, layer.dot_codex_folder.as_path())?;
++        let config = enforce_model_instructions_file_containment(
++            config,
++            project_root,
++            &layer.dot_codex_folder,
++            &mut startup_warnings,
++        );
+         let config = if layer.load_root_checkout_hooks {
+             merge_root_checkout_project_hooks(
+                 fs,
+@@ -1385,10 +1392,70 @@ async fn load_project_layers(
+ 
+     Ok(LoadedProjectLayers {
+         layers,
+-        startup_warnings: discovered.startup_warnings,
++        startup_warnings,
+     })
+ }
+ 
++/// hunma finding "project-model-instructions-outside-read": a project-local
++/// `.codex/config.toml` can set `model_instructions_file` to a lexically
++/// out-of-tree path (`..`, an absolute path, or a symlink that structurally
++/// resolves outside the project). `resolve_relative_paths_in_config_toml`
++/// absolutizes the value against the `.codex/` layer directory but never
++/// checks that the result stays under `project_root`, and the resolved
++/// content ends up in the model's `instructions` field on every turn.
++///
++/// This is scoped to `load_project_layers` (project-sourced layers only) and
++/// not folded into `resolve_relative_paths_in_config_toml` itself: that
++/// function is also used to resolve the user-level `CODEX_HOME` layer and
++/// managed/cloud config layers, where an out-of-project `model_instructions_file`
++/// is the intended, trusted behavior (e.g. an org-wide shared instructions
++/// file). Containment is a project-layer-specific policy, not a generic
++/// path-resolution rule.
++///
++/// Known limitation: this is a lexical (`Path::starts_with`) containment
++/// check, not a canonicalizing one. A symlink inside the project whose
++/// target is outside `project_root` will still pass this check; closing that
++/// gap requires resolving the value against the filesystem (e.g. in
++/// `try_read_non_empty_file`, which already has `fs` access) at read time,
++/// immediately before the file is opened.
++fn enforce_model_instructions_file_containment(
++    config: TomlValue,
++    project_root: &AbsolutePathBuf,
++    layer_dir: &AbsolutePathBuf,
++    warnings: &mut Vec<String>,
++) -> TomlValue {
++    const FIELD: &str = "model_instructions_file";
++
++    let TomlValue::Table(mut table) = config else {
++        return config;
++    };
++    let Some(value) = table.get(FIELD) else {
++        return TomlValue::Table(table);
++    };
++    let Some(path_str) = value.as_str() else {
++        return TomlValue::Table(table);
++    };
++
++    // `resolve_relative_paths_in_config_toml` already ran, so a relative
++    // value here would be a bug upstream; treat it as out-of-tree rather
++    // than silently trusting it.
++    let resolved = Path::new(path_str);
++    let contained = resolved.is_absolute() && resolved.starts_with(project_root.as_path());
++
++    if !contained {
++        warnings.push(format!(
++            "ignoring {FIELD} set by project config at {} because it resolves outside the \
++             project root {} ({path_str}); project-local config may not point instructions \
++             outside the project",
++            layer_dir.as_path().display(),
++            project_root.as_path().display(),
++        ));
++        table.remove(FIELD);
++    }
++
++    TomlValue::Table(table)
++}
++
+ async fn discover_project_layers(
+     fs: &dyn ExecutorFileSystem,
+     cwd: &AbsolutePathBuf,

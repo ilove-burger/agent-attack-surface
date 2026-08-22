@@ -1,0 +1,122 @@
+diff --git a/codex-rs/config/src/loader/tests.rs b/codex-rs/config/src/loader/tests.rs
+index 8df26eb6cf..84437febb7 100644
+--- a/codex-rs/config/src/loader/tests.rs
++++ b/codex-rs/config/src/loader/tests.rs
+@@ -572,3 +572,117 @@ async fn local_layers_keep_raw_paths_order_and_legacy_requirements() {
+         0
+     );
+ }
++
++// hunma finding "project-model-instructions-outside-read": a trusted project's
++// `.codex/config.toml` could set `model_instructions_file` to a path that
++// escapes the project root (`..`, an absolute path). The resolved content is
++// read and sent to the model as `instructions` on every turn with no
++// additional prompt beyond the one-time project trust decision. These two
++// tests pin the containment fix in `enforce_model_instructions_file_containment`.
++async fn setup_trusted_project_with_model_instructions(
++    model_instructions_file_value: &str,
++) -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
++    let tmp = tempdir().expect("tempdir");
++    let codex_home = tmp.path().join("codex-home");
++    let project = tmp.path().join("project");
++    let dot_codex = project.join(".codex");
++    for dir in [&codex_home, &dot_codex] {
++        std::fs::create_dir_all(dir).expect("create fixture directory");
++    }
++    std::fs::write(project.join(".project-root"), "").expect("write project marker");
++
++    let project_key = TomlValue::String(project_trust_key(&project)).to_string();
++    std::fs::write(
++        codex_home.join(CONFIG_TOML_FILE),
++        format!(
++            "project_root_markers=[\".project-root\"]\n[projects.{project_key}]\ntrust_level=\"trusted\""
++        ),
++    )
++    .expect("write user config");
++    std::fs::write(
++        dot_codex.join(CONFIG_TOML_FILE),
++        format!("model_instructions_file = \"{model_instructions_file_value}\"\n"),
++    )
++    .expect("write project config");
++
++    (tmp, codex_home, project)
++}
++
++#[tokio::test]
++async fn project_model_instructions_file_outside_project_root_is_dropped() {
++    let (tmp, codex_home, project) =
++        setup_trusted_project_with_model_instructions("../../outside/secret.md").await;
++    // The referenced file does not even need to exist: containment is
++    // enforced on the resolved path before any read is attempted.
++    std::fs::create_dir_all(tmp.path().join("outside")).expect("create outside dir");
++    std::fs::write(tmp.path().join("outside").join("secret.md"), "PWNED")
++        .expect("write outside file");
++
++    let cwd = AbsolutePathBuf::from_absolute_path(&project).expect("absolute cwd");
++    let stack = load_config_layers_state(
++        &TestFileSystem,
++        &codex_home,
++        Some(cwd),
++        &[],
++        LoaderOverrides::without_managed_config_for_tests(),
++        &crate::NoopThreadConfigLoader,
++    )
++    .await
++    .expect("load config layers");
++
++    assert_eq!(
++        stack.effective_config().get("model_instructions_file"),
++        None,
++        "an out-of-project model_instructions_file must not survive into the effective config"
++    );
++    let warnings = stack
++        .startup_warnings()
++        .expect("expected a containment startup warning");
++    assert!(
++        warnings
++            .iter()
++            .any(|warning| warning.contains("model_instructions_file")
++                && warning.contains("outside the project root")),
++        "expected a model_instructions_file containment warning, got: {warnings:?}"
++    );
++}
++
++#[tokio::test]
++async fn project_model_instructions_file_inside_project_root_is_kept() {
++    let (_tmp, codex_home, project) =
++        setup_trusted_project_with_model_instructions("./instructions.md").await;
++    std::fs::write(
++        project.join(".codex").join("instructions.md"),
++        "in-project instructions",
++    )
++    .expect("write in-project instructions file");
++
++    let cwd = AbsolutePathBuf::from_absolute_path(&project).expect("absolute cwd");
++    let stack = load_config_layers_state(
++        &TestFileSystem,
++        &codex_home,
++        Some(cwd),
++        &[],
++        LoaderOverrides::without_managed_config_for_tests(),
++        &crate::NoopThreadConfigLoader,
++    )
++    .await
++    .expect("load config layers");
++
++    let expected = AbsolutePathBuf::resolve_path_against_base(
++        "./instructions.md",
++        project.join(".codex"),
++    );
++    assert_eq!(
++        stack.effective_config().get("model_instructions_file"),
++        Some(&TomlValue::String(expected.to_path_buf().display().to_string())),
++        "an in-project model_instructions_file must not be affected by the containment check"
++    );
++    assert!(
++        !stack
++            .startup_warnings()
++            .map(|warnings| warnings.iter().any(|w| w.contains("model_instructions_file")))
++            .unwrap_or(false),
++        "an in-project model_instructions_file must not produce a containment warning"
++    );
++}

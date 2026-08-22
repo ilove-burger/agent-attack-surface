@@ -16,8 +16,8 @@
 - **프로젝트 .env가 CODEX_HOME 재지정 → 로컬 MCP spawn** — vuln 0.21.0 / fixed 0.22.0 / current 0.147.0 3-tier golden target. 알려진 패치 CVE. 하네스: `compare-codex-61260`.
 - **project-local model_instructions_file → 프로젝트 밖 파일 읽기 → 모델 instructions 주입** — 최초
   취약 stable `0.78.0`, 최신 `0.149.0`까지 재현(3/3 UI trust E2E + strace 런타임 검증). containment
-  수정안 + 회귀 테스트 자체 작성·검증 완료(`cargo test -p codex-config` 261/261). lexical
-  containment라 symlink 변형은 미방어로 남음.
+  수정안(lexical `..`/절대경로 pass + symlink canonicalize pass) + 회귀 테스트 4건 자체 작성·검증
+  완료(`cargo test -p codex-config` 263/263).
 
 ## 미탐색 표면 (open variants)
 
@@ -26,4 +26,3 @@
 - ☐ 다른 CODEX_HOME 재지정 벡터(variants 매트릭스 일부만 진행)
 - ☐ Codex MCP 서버 정의 오염
 - ☐ 플러그인/npm 공급망
-- ☐ model_instructions_file의 symlink containment 우회(lexical 체크만 존재, canonicalize 미적용)

@@ -1,7 +1,8 @@
 # OpenAI Codex CLI — project-local `model_instructions_file`을 통한 프로젝트 밖 파일 읽기 → 모델 instructions 주입
 
 > 상태: `소스 확인` · `최초 stable 경계 확인(0.77.0/0.78.0)` · `실제 UI trust E2E 3/3 재현(0.149.0)` ·
-> `런타임 syscall 검증(strace)` · `containment 수정안 + 회귀 테스트 작성` · `벤더 미확인 후보`
+> `런타임 syscall 검증(strace)` · `containment 수정안(lexical+symlink canonicalize) + 회귀 테스트 4건` ·
+> `벤더 미확인 후보`
 >
 > 증거 표기: **[소스]** source에서 확인 · **[런타임]** 실제 바이너리 실행에서 관찰(syscall/네트워크) ·
 > **[추론]** 근거에서 도출
@@ -194,25 +195,26 @@ TUI의 `Yes, continue`에 Enter → loopback mock에서 첫 요청 캡처. bypas
 
 1. **(작성·검증 완료)** project-local `model_instructions_file`에 project_root containment 검사를
    추가한다. `proposed-fix.patch` — `load_project_layers()`에 스코프를 한정해 user/managed/cloud
-   layer의 정당한 사용을 보존.
-2. **(다음 단계, 미작성)** 위 패치는 lexical containment라 symlink 변형을 막지 못한다.
-   `try_read_non_empty_file()`에서 읽기 직전 `fs.canonicalize()`로 symlink를 해소한 뒤 재검사해야
-   완전히 닫힌다(`HARDENING.md`에 상세).
-3. UI 신뢰 프롬프트에 "이 프로젝트의 설정이 프로젝트 밖 파일을 모델에게 보낼 수 있다"는 문구를
+   layer의 정당한 사용을 보존. lexical pass(`..`/절대경로)와 canonicalize pass(symlink) 둘 다 포함.
+2. UI 신뢰 프롬프트에 "이 프로젝트의 설정이 프로젝트 밖 파일을 모델에게 보낼 수 있다"는 문구를
    추가해, 신뢰 승인의 실제 위임 범위를 명확히 한다.
-4. `model_instructions_file`처럼 모델에게 직접 전달되는 값은, 일반 path-like config 값과 다른
+3. `model_instructions_file`처럼 모델에게 직접 전달되는 값은, 일반 path-like config 값과 다른
    신뢰 축(예: 별도 승인)으로 다루는 것을 고려한다.
 
 ## [10] 회귀 테스트
 
-**(작성·검증 완료)** `regression-test.patch` — `config/src/loader/tests.rs`에 2개 추가, 실제
+**(작성·검증 완료)** `regression-test.patch` — `config/src/loader/tests.rs`에 4개 추가, 실제
 `load_config_layers_state()`(프로덕션 진입점)로 E2E 검증:
 
-1. `project_model_instructions_file_outside_project_root_is_dropped` — 패치 없이 **FAIL**(취약점
-   재현), 패치 적용 시 PASS.
+1. `project_model_instructions_file_outside_project_root_is_dropped` — `..` escape. 패치 없이
+   **FAIL**(취약점 재현), 패치 적용 시 PASS.
 2. `project_model_instructions_file_inside_project_root_is_kept` — 음성 대조군, 정상 사용 보존 확인.
+3. `project_model_instructions_file_symlink_escape_is_dropped` — 프로젝트 안 symlink가 밖을 가리키는
+   경우. lexical-only 패치로는 **FAIL**(symlink gap 재현), canonicalize pass 추가 후 PASS.
+4. `project_model_instructions_file_symlink_inside_project_root_is_kept` — 프로젝트 내부를 가리키는
+   symlink. 음성 대조군, canonicalize pass가 정당한 symlink 사용까지 막지 않음을 증명.
 
-`cargo test -p codex-config` 261/261, `cargo check -p codex-core` clean. 상세는 `HARDENING.md`.
+`cargo test -p codex-config` 263/263, `cargo check -p codex-core` clean. 상세는 `HARDENING.md`.
 
 ## 첨부
 

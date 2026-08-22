@@ -2,7 +2,7 @@
 
 > **Provenance:** 소스 분석 + 실제 `codex-cli 0.149.0` UI trust E2E(`hunt-shell` 격리, bypass 없음)로 독립 재현.
 > **분석 상태:** `소스 확인(rust-v0.148.0)` · `최초 stable 경계 확인(0.77.0/0.78.0)` · `UI trust E2E 3/3` ·
-> `런타임 syscall 검증(strace)` · `containment 수정안 + 회귀 테스트 작성·검증`
+> `런타임 syscall 검증(strace)` · `containment 수정안(lexical+symlink canonicalize) + 회귀 테스트 4건 작성·검증`
 > **시험한 보안 경계:** project-local 설정이 지정할 수 있는 경로 ≠ project_root 내부로 한정된 경로
 > **판정:** 🔴 **LIVE (미패치 0-day 후보, containment 수정안 자체 검증 완료)** · **제보:** 진행 예정
 > (OpenAI Codex). 상위 [카테고리 인덱스](../README.md) · repo 루트 [README](../../../README.md).
@@ -44,8 +44,9 @@ Responses 요청의 최상위 `instructions` 필드로 전송된다 — 재확�
   call chain, 소스 파일:라인 + strace 런타임 검증
 - [`HARDENING.md`](HARDENING.md) — containment 수정안 설계 근거·한계, 패치 유무 대조 테스트 결과
 - [`proposed-fix.patch`](proposed-fix.patch) — containment 수정안 (`config/src/loader/mod.rs`,
-  project layer에만 스코프)
-- [`regression-test.patch`](regression-test.patch) — 회귀 테스트 2개 (`config/src/loader/tests.rs`)
+  project layer에만 스코프, lexical pass + symlink canonicalize pass)
+- [`regression-test.patch`](regression-test.patch) — 회귀 테스트 4개 (`config/src/loader/tests.rs`,
+  escape/in-project × plain path/symlink)
 - [`evidence/OBSERVED_RESULTS.md`](evidence/OBSERVED_RESULTS.md) — 버전 경계·UI E2E·strace·회귀
   테스트 결과 요약
 - [`evidence/SHA256SUMS`](evidence/SHA256SUMS) — 이 폴더 파일 무결성

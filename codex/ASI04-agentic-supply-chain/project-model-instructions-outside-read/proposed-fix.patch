@@ -1,8 +1,8 @@
 diff --git a/codex-rs/config/src/loader/mod.rs b/codex-rs/config/src/loader/mod.rs
-index f601250f9d..618e30578d 100644
+index f601250f9d..6259155c98 100644
 --- a/codex-rs/config/src/loader/mod.rs
 +++ b/codex-rs/config/src/loader/mod.rs
-@@ -1360,10 +1360,17 @@ async fn load_project_layers(
+@@ -1360,10 +1360,19 @@ async fn load_project_layers(
          strict_config,
      )
      .await?;
@@ -12,15 +12,17 @@ index f601250f9d..618e30578d 100644
          let config =
              resolve_relative_paths_in_config_toml(layer.config, layer.dot_codex_folder.as_path())?;
 +        let config = enforce_model_instructions_file_containment(
++            fs,
 +            config,
 +            project_root,
 +            &layer.dot_codex_folder,
 +            &mut startup_warnings,
-+        );
++        )
++        .await;
          let config = if layer.load_root_checkout_hooks {
              merge_root_checkout_project_hooks(
                  fs,
-@@ -1385,10 +1392,70 @@ async fn load_project_layers(
+@@ -1385,10 +1394,108 @@ async fn load_project_layers(
  
      Ok(LoadedProjectLayers {
          layers,
@@ -45,13 +47,22 @@ index f601250f9d..618e30578d 100644
 +/// file). Containment is a project-layer-specific policy, not a generic
 +/// path-resolution rule.
 +///
-+/// Known limitation: this is a lexical (`Path::starts_with`) containment
-+/// check, not a canonicalizing one. A symlink inside the project whose
-+/// target is outside `project_root` will still pass this check; closing that
-+/// gap requires resolving the value against the filesystem (e.g. in
-+/// `try_read_non_empty_file`, which already has `fs` access) at read time,
-+/// immediately before the file is opened.
-+fn enforce_model_instructions_file_containment(
++/// This check runs in two passes:
++///
++/// 1. **Lexical**: `Path::starts_with` on the already-absolutized value
++///    against `project_root`. Catches `..` and absolute-path escapes without
++///    touching the filesystem.
++/// 2. **Canonicalizing**: for a value that passes (1), resolve both the value
++///    and `project_root` through `fs.canonicalize()` and re-check containment
++///    on the resolved (symlink-free) paths. Catches an in-project symlink
++///    whose target lexically looks contained (e.g. `[project_root]/link`)
++///    but actually points outside `project_root` on disk. If either side
++///    fails to canonicalize (most commonly: the target doesn't exist yet),
++///    this pass is skipped and the lexical result stands -- the later read
++///    in `try_read_non_empty_file` will surface a normal "file not found"
++///    error, which is not a security-relevant outcome to gate on here.
++async fn enforce_model_instructions_file_containment(
++    fs: &dyn ExecutorFileSystem,
 +    config: TomlValue,
 +    project_root: &AbsolutePathBuf,
 +    layer_dir: &AbsolutePathBuf,
@@ -73,9 +84,9 @@ index f601250f9d..618e30578d 100644
 +    // value here would be a bug upstream; treat it as out-of-tree rather
 +    // than silently trusting it.
 +    let resolved = Path::new(path_str);
-+    let contained = resolved.is_absolute() && resolved.starts_with(project_root.as_path());
++    let lexically_contained = resolved.is_absolute() && resolved.starts_with(project_root.as_path());
 +
-+    if !contained {
++    if !lexically_contained {
 +        warnings.push(format!(
 +            "ignoring {FIELD} set by project config at {} because it resolves outside the \
 +             project root {} ({path_str}); project-local config may not point instructions \
@@ -84,9 +95,38 @@ index f601250f9d..618e30578d 100644
 +            project_root.as_path().display(),
 +        ));
 +        table.remove(FIELD);
++        return TomlValue::Table(table);
++    }
++
++    if let Some(canonical_target) = canonicalize_best_effort(fs, resolved).await
++        && let Some(canonical_root) = canonicalize_best_effort(fs, project_root.as_path()).await
++        && !canonical_target.starts_with(&canonical_root)
++    {
++        warnings.push(format!(
++            "ignoring {FIELD} set by project config at {} because it resolves (after following \
++             symlinks) outside the project root {} ({path_str} -> {}); a symlink inside the \
++             project may not point instructions outside the project",
++            layer_dir.as_path().display(),
++            project_root.as_path().display(),
++            canonical_target.display(),
++        ));
++        table.remove(FIELD);
 +    }
 +
 +    TomlValue::Table(table)
++}
++
++/// Resolves `path` through the filesystem's canonicalization (following
++/// symlinks), returning `None` rather than propagating an error -- this
++/// check is a best-effort hardening pass, not a source of new hard failures
++/// for configs whose target doesn't exist yet.
++async fn canonicalize_best_effort(
++    fs: &dyn ExecutorFileSystem,
++    path: &Path,
++) -> Option<std::path::PathBuf> {
++    let uri = PathUri::from_abs_path(&AbsolutePathBuf::from_absolute_path(path).ok()?);
++    let canonical_uri = fs.canonicalize(&uri, /*sandbox*/ None).await.ok()?;
++    Some(canonical_uri.to_abs_path().ok()?.to_path_buf())
 +}
 +
  async fn discover_project_layers(

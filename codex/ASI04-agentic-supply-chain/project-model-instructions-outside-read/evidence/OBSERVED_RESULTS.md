@@ -47,15 +47,17 @@ read(41, "HUNMA_UI_TRUST_OUTSIDE_MODEL_INSTRUCTIONS_0_149_0_ONLY\n", 55) = 55
 
 ## Containment 패치 유무 대조 (회귀 테스트)
 
-`config/src/loader/tests.rs`의 두 테스트를 실제 `load_config_layers_state()`(프로덕션 진입점)로
-실행한 결과:
+`config/src/loader/tests.rs`의 네 테스트를 실제 `load_config_layers_state()`(프로덕션 진입점)로
+실행한 결과. 패치는 lexical pass(`..`/절대경로)와 canonicalize pass(symlink)로 구성된다.
 
-| 테스트 | 패치 없이 | 패치 적용 |
-|---|---|---|
-| `project_model_instructions_file_outside_project_root_is_dropped` | **FAIL** — `model_instructions_file` = `/tmp/.tmpYMSNOv/outside/secret.md`가 그대로 effective config에 남음 (취약점 재현) | PASS |
-| `project_model_instructions_file_inside_project_root_is_kept` (음성 대조군) | PASS | PASS |
+| 테스트 | 패치 전혀 없이 | lexical만 | lexical+canonicalize(최종) |
+|---|---|---|---|
+| `outside_project_root_is_dropped` (`..` escape) | **FAIL** — `model_instructions_file` = `/tmp/.tmpYMSNOv/outside/secret.md`가 그대로 effective config에 남음 | PASS | PASS |
+| `inside_project_root_is_kept` (음성 대조군) | PASS | PASS | PASS |
+| `symlink_escape_is_dropped` (프로젝트 안 symlink가 밖을 가리킴) | **FAIL** | **FAIL** — symlink가 lexical 체크를 통과해 남음 (symlink gap 재현) | PASS |
+| `symlink_inside_project_root_is_kept` (음성 대조군) | PASS | PASS | PASS |
 
-패치 적용 후 전체 스위트 `cargo test -p codex-config`: **261 passed, 0 failed**.
+패치 적용 후 전체 스위트 `cargo test -p codex-config`: **263 passed, 0 failed**.
 다운스트림 `cargo check -p codex-core`: clean.
 
 ## 증거 보존 제한

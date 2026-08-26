@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "collected_at": "2026-08-26",
+  "candidate": "execpolicy-prefix-rule-script-substitution",
+  "release": {
+    "package": "@openai/codex",
+    "version": "0.149.1",
+    "linux_x64_binary_sha256": "73dc5888888f411c1f0fa7b81d866e721dcc86b527ce8e3b2cf4708661e823ba",
+    "windows_x64_binary_sha256": "a395030b56b126f608f2403036dddb654a9c063213e9c2b5f85d954cf490ebe6"
+  },
+  "cases": [
+    {
+      "id": "linux-full-prompt-injection-positive",
+      "target_os": "linux",
+      "approval_transport": "actual TUI",
+      "mutation_transport": "model-apply-patch",
+      "first_decision": "approved_execpolicy_prefix",
+      "rule": "prefix_rule(pattern=[\"bash\", \"approved.sh\"], decision=\"allow\")",
+      "command_approval_prompts": 1,
+      "script_content_changed": true,
+      "marker_observed": true,
+      "pass": true
+    },
+    {
+      "id": "linux-approve-once-control",
+      "target_os": "linux",
+      "first_decision": "approved_once",
+      "second_prompt_observed": true,
+      "marker_observed": false,
+      "pass": true
+    },
+    {
+      "id": "linux-cross-process-restart-persistence",
+      "target_os": "linux",
+      "approval_transport": "actual TUI",
+      "mutation_transport": "external-swap-between-processes",
+      "first_decision": "approved_execpolicy_prefix",
+      "rule": "prefix_rule(pattern=[\"bash\", \"approved.sh\"], decision=\"allow\")",
+      "same_isolated_codex_home": true,
+      "first_process_terminated": true,
+      "second_process_command_approval_prompt": false,
+      "script_content_changed": true,
+      "marker_observed": true,
+      "pass": true
+    },
+    {
+      "id": "linux-git-pull-delivery-positive",
+      "target_os": "linux",
+      "approval_transport": "actual TUI",
+      "mutation_transport": "git-pull",
+      "first_decision": "approved_execpolicy_prefix",
+      "command_approval_prompts": 1,
+      "fast_forward_pull_succeeded": true,
+      "received_publisher_commit": true,
+      "changed_files": [
+        "approved.sh"
+      ],
+      "victim_worktree_clean": true,
+      "script_content_changed": true,
+      "marker_observed": true,
+      "pass": true
+    },
+    {
+      "id": "linux-argv-change-control",
+      "target_os": "linux",
+      "first_decision": "approved_execpolicy_prefix",
+      "second_argv": "bash ./approved.sh",
+      "second_prompt_observed": true,
+      "marker_observed": false,
+      "pass": true
+    },
+    {
+      "id": "windows-native-cmd-external-swap-positive",
+      "target_os": "windows",
+      "approval_transport": "actual TUI",
+      "sandbox_setup": "non-admin sandbox",
+      "sandbox_mode": "workspace-write",
+      "mutation_transport": "external-swap",
+      "first_decision": "approved_execpolicy_prefix",
+      "rule": "prefix_rule(pattern=[\"cmd.exe\", \"/d\", \"/c\", \"approved.cmd\"], decision=\"allow\")",
+      "command_approval_prompts": 1,
+      "script_content_changed": true,
+      "marker_observed": true,
+      "native_windows_identity_observed": true,
+      "pass": true
+    },
+    {
+      "id": "windows-native-cmd-approve-once-control",
+      "target_os": "windows",
+      "first_decision": "approved_once",
+      "second_prompt_observed": true,
+      "marker_observed": false,
+      "pass": true
+    },
+    {
+      "id": "windows-native-cmd-argv-change-control",
+      "target_os": "windows",
+      "first_decision": "approved_execpolicy_prefix",
+      "second_argv": "cmd.exe /d /c .\\approved.cmd",
+      "second_prompt_observed": true,
+      "marker_observed": false,
+      "pass": true
+    }
+  ],
+  "source": {
+    "stable_tag": "rust-v0.149.1",
+    "stable_commit": "ff29a44391deccde0aba0f8390337d7f3c319ea4",
+    "preview_tag": "rust-v0.150.0-alpha.9",
+    "preview_commit": "a1a7e0b1d11436a3c33d14b2f019004bdf453777",
+    "relevant_fix_observed_in_reviewed_diff": false
+  },
+  "platform_limits": {
+    "macos_runtime_tested": false,
+    "macos_artifacts_hashed": true,
+    "windows_model_patch_requires_separate_file_edit_approval": true
+  },
+  "severity": {
+    "status": "vendor-unconfirmed",
+    "numeric_cvss_assigned": false,
+    "previous_8_5_proposal_withdrawn": true
+  }
+}

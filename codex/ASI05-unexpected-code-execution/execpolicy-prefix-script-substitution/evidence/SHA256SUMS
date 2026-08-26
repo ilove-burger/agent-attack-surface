@@ -1,0 +1,10 @@
+ed2cb7899a3730083197f91fba98549367ed6fd13137ae8b1f24e209d64f8655  ./DISCLOSURE.md
+6984ba54268bae3285a07929c377102133a70b75dc61d0f13623a4802e738928  ./README.md
+e16a1c3756e053afbd6c70cceefe59fbf0b92b14da22fd3afa45f90bd6c10c38  ./poc-tui-execpolicy-restart.py
+ece1e45ae8e49f513b66c63547d34e88dc852c67e78758dfc99315b746fc270b  ./poc-tui-execpolicy-substitution.py
+d9a01924110e7b93f6c1ddaaa57d26b52d7201aa77fb29ef5a56405c8e8d56a7  ./repro-test.patch
+999a6cd33117439ee3dd70bb2fa8464e362f36f1b52c42230fe419d3b7ff91f1  ./run-macos-matrix.sh
+99b912770dcc15bfb2ff9e3d027e20e32467be11e0a7d845e6afc8f4a1a7866f  ./evidence/MACOS_RUNBOOK.md
+e53ea33ae602283bd93c0fb5fcb8b8d1b144e2c9d9f9a615cb107c4d81c3262b  ./evidence/OBSERVED_RESULTS.md
+ceedda8d9015933ea10d1ddcbad6b5d7208218436609c2578d05e0464579f938  ./evidence/TUI_E2E_0.149.1.md
+07ed6e75106424205d34d187ee26ed82acec556b310ee006cf6ed1b71d57c83a  ./evidence/results-0.149.1.json

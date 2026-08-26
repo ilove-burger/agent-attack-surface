@@ -15,6 +15,7 @@
 | client-known cloud-config HMAC을 통한 다음 실행 policy escalation | 🔴 LIVE (배치 조건부, 6/6) | [cloud-config-policy-escalation](cloud-config-policy-escalation/) |
 | direct full-network에서 App Server Unix socket confused deputy | 🔴 LIVE (조건부, UID 1000 E2E) | [full-network-uds-rce](full-network-uds-rce/) |
 | GNU sed suffix를 통한 persistent prefix approval scope 확장 | 🔴 LIVE (0.148.0 policy 재현) | [sed-prefix-rule-rce](sed-prefix-rule-rce/) |
+| 영속 execpolicy argv prefix가 대상 스크립트 content 변경 미반영 | 🔴 LIVE 후보 (0.149.1 Linux/Windows TUI) | [execpolicy-prefix-script-substitution](execpolicy-prefix-script-substitution/) |
 
 - **hook 대상 스크립트 치환** — hook 신뢰 해시가 hook 정의만 커버하고 참조 스크립트 내용을 제외 →
   승인된 hook의 스크립트를 교체하면 재승인 없이 command sandbox 밖 same-user 실행. 소스+unit test+
@@ -36,9 +37,18 @@
   기존 allow가 재사용되고 unsandboxed escalation으로 이어짐. 0.147.0 impact, 0.148.0 policy oracle 확인.
   Secondary: ASI02.
 
+- **execpolicy prefix script substitution** — 실제 TUI의 `p` 선택이 argv prefix allow 규칙을 영속
+  저장하지만 참조 스크립트 bytes를 묶지 않아, content만 교체한 뒤 동일 argv를 호출하면 재승인 없이
+  sandbox 밖에서 교체된 코드가 실행됨. npm stable 0.149.1 actual TUI에서 Linux full prompt-injection
+  chain, cross-process restart, script-only `git pull` delivery와 Windows native `cmd.exe`
+  external-delivery chain을 확인했고, approve-once/argv-change controls는 모두 marker 없이 두 번째 승인
+  화면에서 정지했다. 일반 명령 TUI에는 내부 `ApprovedForSession` 선택지가 없다는 reachability 교정도
+  반영했다. macOS는 artifact/source와 실행 runbook만 준비했고 runtime은 미검증.
+  Secondary: ASI02.
+
 ## 미탐색 표면 (open variants)
 
 이 카테고리에서 아직 안 판 기법들. 검증한 게 있어도 카테고리가 '끝난' 건 아니다.
 
-- ☐ 세션 승인 후 대상 파일/스크립트 치환 (shell approval 캐시)
 - ☐ 다른 pre-trust 자동 실행 벡터
+- ☐ macOS actual TUI runtime 재검증
